@@ -70,3 +70,12 @@ The instance *KAMINSKI WINCENTY J* contains unreasonable value for *from_message
 
 
 
+----
+
+## Model selection and optimization
+
+### Data scaling
+
+We have lots of outliers in the data which might be an indication of fraud. That's why we cannot remove them all. As outliers have an impact on the algorithms I will us *RobustScale*r in addition to the *StandardScaler* and compare the results. Even non-linear scaling might be an option using *QuantileTransformer* or *PowerTransformer* to fit the data into a normal distribution.
+
+ 

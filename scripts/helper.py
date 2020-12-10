@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import precision_recall_curve, recall_score, precision_score
+from sklearn.base import BaseEstimator, clone
+from sklearn.model_selection import cross_val_predict
 
 def crt_plot(data, features, type='box', figsize=(20,15), shape=(1,1), log=[], bins=10, sort=True, color='orange', save=False):
     '''
@@ -168,3 +170,68 @@ def check_Classifiers(X, y, classifiers, imputers=[], scalers=[], names=[], verb
                 X_trans = pipe.fit_transform(X)
                 scores = cross_val_score(clf, X_trans, cv=cv)
 
+class flex_classifier(BaseEstimator):
+    def __init__(self, classifier, min_precision=0.0, min_recall=0.0, maximize='recall', threshold=0.0):
+        self.classifier = clone(classifier)
+        self.min_precision = min_precision
+        self.min_recall = min_recall
+        self.maximize = maximize
+        self.threshold = threshold
+        self.feasibiliy = None
+        #self.classifier.kernel = kernel
+        #self.classifier.gamma = gamma
+        #self.classifier.C = C
+
+    def fit(self, X, y=None):
+        self.classifier.fit(X, y)
+        #self.threshold = self.det_threshold(X, y)
+        return self
+    
+    def predict(self, X):
+        df_h = self.classifier.decision_function(X) - self.threshold
+        y_h = df_h >= self.threshold
+        return y_h.astype('uint8')
+
+    def det_threshold(self, X, y, replace=True):
+        scores = cross_val_predict(self.classifier, X, y, cv=6, method='decision_function')
+        ranked = np.sort(scores)
+        predict = (scores >= 0).astype('uint8')
+        recall = recall_score(y, predict)
+        precision = precision_score(y, predict)
+ 
+        if recall < self.min_recall and precision < self.min_precision:
+            self.feasibiliy = False
+            return 0.0
+        elif recall == 1.0 and precision >= self.min_precision:
+            self.feasibiliy = True
+            return 0.0
+        else:
+            self.feasibiliy = True
+        threshold_matrix = [ [self.threshold, recall, precision], ]
+        if self.maximize == 'recall':
+            for threshold in (score for score in ranked[::-1] if score < 0 ):
+                predict = (scores-threshold >= 0).astype('uint8')
+                recall = recall_score(y, predict)
+                precision = precision_score(y, predict)
+                threshold_matrix.append([threshold, recall, precision])
+            #print(np.array(threshold_matrix))
+            threshold, recall, precision = threshold_matrix[0]
+            for threshold_, recall_, precision_ in threshold_matrix[1:]:
+                if precision_ < self.min_precision:
+                    break
+                if recall_ > recall :
+                    threshold, recall, precision = threshold_, recall_, precision_ 
+        if replace:
+            self.threshold = threshold
+        return threshold, recall, precision
+
+def get_features(features, support):
+    '''
+    Extract features from from 'feature' list by boolean 'support' list.
+
+    '''
+    f_list = []
+    for feature, choise in zip(features, support):
+        if choise: 
+            f_list.append(feature)
+    return f_list

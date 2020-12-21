@@ -6,6 +6,7 @@ import seaborn as sns
 from sklearn.metrics import precision_recall_curve, recall_score, precision_score
 from sklearn.base import BaseEstimator, clone
 from sklearn.model_selection import cross_val_predict
+from collections import defaultdict
 
 def crt_plot(data, features, type='box', figsize=(20,15), shape=(1,1), log=[], bins=10, sort=True, color='orange', save=False):
     '''
@@ -136,15 +137,18 @@ def plt_precision_recall_vs_threshold(precision, recall, threshold, title=False)
         
     return None
 
-def plt_precision_vs_recall(precision, recall, title=False):
-    plt.plot(recall, precision, "b-", linewidth=1)
+def plt_precision_vs_recall(precision, recall, title=False, **kwargs):
+    plt.plot(recall, precision, "b-", linewidth=1, **kwargs)
     plt.xlabel("Recall", fontsize=12)
     plt.ylabel("Precision", fontsize=12)
     plt.axis([0, 1, 0, 1])
     plt.grid(True)
+    if 'label' in kwargs.keys():
+        plt.legend()
     if title != False:
         plt.title(title)
     return None
+
 
 def plot_roc_curve(fpr, tpr, title=False):
     plt.plot(fpr, tpr, linewidth=1)
@@ -171,6 +175,8 @@ def check_Classifiers(X, y, classifiers, imputers=[], scalers=[], names=[], verb
                 scores = cross_val_score(clf, X_trans, cv=cv)
 
 class flex_classifier(BaseEstimator):
+    '''
+    '''
     def __init__(self, classifier, min_precision=0.0, min_recall=0.0, maximize='recall', threshold=0.0):
         self.classifier = clone(classifier)
         self.min_precision = min_precision
@@ -201,12 +207,13 @@ class flex_classifier(BaseEstimator):
  
         if recall < self.min_recall and precision < self.min_precision:
             self.feasibiliy = False
-            return 0.0
+            return 0.0, recall, precision
         elif recall == 1.0 and precision >= self.min_precision:
             self.feasibiliy = True
-            return 0.0
+            return 0.0, recall, precision
         else:
             self.feasibiliy = True
+        
         threshold_matrix = [ [self.threshold, recall, precision], ]
         if self.maximize == 'recall':
             for threshold in (score for score in ranked[::-1] if score < 0 ):
@@ -221,8 +228,13 @@ class flex_classifier(BaseEstimator):
                     break
                 if recall_ > recall :
                     threshold, recall, precision = threshold_, recall_, precision_ 
+        elif self.maximize == 'precision':
+            threshold = self.threshold
+            # This feature is not yet implemented
+        
         if replace:
             self.threshold = threshold
+        
         return threshold, recall, precision
 
 def get_features(features, support):

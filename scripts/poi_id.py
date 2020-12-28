@@ -3,6 +3,8 @@
 import pandas as pd
 import numpy as np
 import helper
+import matplotlib.pyplot as plt
+import seaborn as sns
 import sys
 import pickle
 sys.path.append("../tools/")
@@ -17,10 +19,11 @@ DATA   = '../data/'
 ### Task 1: Select what features you'll use.
 ### features_list is a list of strings, each of which is a feature name.
 ### The first feature must be "poi".
-# features_list = ['poi','salary'] # You will need to use more features
-payment_features = ['salary', 'bonus', 'long_term_incentive', 'deferred_income', 'deferral_payments', 'other', 'expenses', 'director_fees', 'total_payments']
+payment_features = ['salary', 'bonus', 'long_term_incentive', 'deferred_income', 'deferral_payments', 'loan_advances', 'other', 'expenses', 'director_fees', 'total_payments']
 stock_features   = ['exercised_stock_options', 'restricted_stock', 'restricted_stock_deferred', 'total_stock_value']
 mail_features    = ['from_messages', 'to_messages', 'from_this_person_to_poi', 'from_poi_to_this_person', 'shared_receipt_with_poi']
+
+features = payment_features + stock_features + mail_features
 
 ### Load the dictionary containing the dataset
 with open(DATA+"final_project_dataset.pkl", "r") as data_file:
@@ -32,35 +35,71 @@ data_Frame = pd.DataFrame(data_dict).transpose()
 data_Frame = data_Frame[ columns ]    
 
 # Replace 'NaN' string with numpy.NaN and change POI from boolean to integer (poi: 1, no_poi: 0)
-def repl_NaN(val):
-    if val == 'NaN':
-        val = np.NaN
-    if isinstance(val, bool):
-        val = int(val)
-    return val
-data_Frame = data_Frame.applymap(repl_NaN)
+data_Frame = data_Frame.applymap(helper.repl_NaN)
+
+print "Understanding the dataset"
+print "-------------------------"
+
+# Determine number of data points
+n = len(data_dict.keys())
+print "Number of data points:", n
+# Number of pois/ non-pois
+nbr_pois = data_Frame.poi.sum()
+print "Number of pois/ non-pois:", nbr_pois, "/", n-nbr_pois
+# Number of features
+print "Number of features:", len(columns) - 1
+# Further info regarding features
+print "Further info regarding features:"
+print data_Frame.info()
 
 #############################
 ### Task 2: Remove outliers
+# Create histograms for all features and save the image
+data_Frame.hist(bins=20,figsize=(20,15))
+plt.tight_layout()
+plt.savefig(IMAGES+"features_histogram_plots", dpi='figure')
+# plt.show()
+print "Histogram plot created and saved. See './images/features_histogram_plots.png'."
+print
+print "Bonus above 10M USD"
+print data_Frame[ data_Frame['bonus'] >= 10000000 ]
 
 # Dropping the 'TOTAL' instance
 data_Frame.drop(labels='TOTAL', inplace=True)
-
 # Drop 'THE TRAVEL AGENCY IN THE PARK' instance. This is an agency and not a real person. In addition there is not much data available for this instance.
 data_Frame.drop(labels='THE TRAVEL AGENCY IN THE PARK', inplace=True)
+print "Deleted the instances 'TOTAL' and 'THE TRAVEL AGENCY IN THE PARK'."
+
+# Checking the total stock and payment feature
+data_Frame_eval = data_Frame.fillna(value=0.0)
+data_Frame_eval['eval_payments'] = data_Frame_eval['salary'] + data_Frame_eval['bonus'] + data_Frame_eval['long_term_incentive'] + data_Frame_eval['deferred_income'] + data_Frame_eval['deferral_payments'] + data_Frame_eval['loan_advances'] + data_Frame_eval['other'] + data_Frame_eval['expenses'] + data_Frame_eval['director_fees'] - data_Frame_eval['total_payments']
+
+print
+print "Check 'total_payments' feature:"
+print data_Frame_eval[ data_Frame_eval['eval_payments'] != 0.0 ][['salary', 'bonus', 'long_term_incentive', 'deferred_income', 'deferral_payments', 'loan_advances', 'other', 'expenses', 'director_fees', 'total_payments', 'eval_payments', 
+           'exercised_stock_options', 'restricted_stock', 'restricted_stock_deferred', 'total_stock_value']]
+
+data_Frame_eval['eval_stock'] = data_Frame_eval['exercised_stock_options'] + data_Frame_eval['restricted_stock'] + data_Frame_eval['restricted_stock_deferred'] - data_Frame_eval['total_stock_value']
+
+print
+print "Check 'total_stock_value' feature:"
+print data_Frame_eval[ data_Frame_eval['eval_stock'] != 0.0 ][['salary', 'bonus', 'long_term_incentive', 'deferred_income', 'deferral_payments', 'loan_advances', 'other', 'expenses', 'director_fees', 'total_payments', 'eval_payments', 
+           'exercised_stock_options', 'restricted_stock', 'restricted_stock_deferred', 'total_stock_value', 'eval_stock'] ]
 
 # Correcting Robert Belfer instance
+print "Correcting 'Robert Belfer' instance."
 data_Frame.loc['BELFER ROBERT', 'restricted_stock'] = 44093.0
 data_Frame.loc['BELFER ROBERT', 'restricted_stock_deferred'] = -44093.0
 data_Frame.loc['BELFER ROBERT', 'exercised_stock_options'] = np.NaN
 data_Frame.loc['BELFER ROBERT', 'total_stock_value'] = np.NaN
-data_Frame.loc['BELFER ROBERT', 'director_fees'] = 102500.0
+data_Frame.loc['BELFER ROBERT', 'director_fees'] = 102500.0 
 data_Frame.loc['BELFER ROBERT', 'deferred_income'] = -102500.0
 data_Frame.loc['BELFER ROBERT', 'deferral_payments'] = np.NaN
 data_Frame.loc['BELFER ROBERT', 'expenses'] = 3285.0
 data_Frame.loc['BELFER ROBERT', 'total_payments'] = 3285.0
 
 # Correcting BHATNAGAR SANJAY instance
+print "Correcting 'BHATNAGAR SANJAY' instance."
 data_Frame.loc['BHATNAGAR SANJAY', 'other'] = np.NaN
 data_Frame.loc['BHATNAGAR SANJAY', 'expenses'] = 137864.0
 data_Frame.loc['BHATNAGAR SANJAY', 'director_fees'] = np.NaN
@@ -70,11 +109,38 @@ data_Frame.loc['BHATNAGAR SANJAY', 'restricted_stock'] = 2604490.0
 data_Frame.loc['BHATNAGAR SANJAY', 'restricted_stock_deferred'] = -2604490.0
 data_Frame.loc['BHATNAGAR SANJAY', 'total_stock_value'] = 15456290.0
 
+print
+print "Corrected instances 'BELFER ROBERT' and 'BHATNAGAR SANJAY':"
+print data_Frame.loc[ ['BELFER ROBERT', 'BHATNAGAR SANJAY'] ][['salary', 'bonus', 'long_term_incentive', 'deferred_income', 'deferral_payments', 'loan_advances', 'other', 'expenses', 'director_fees', 'total_payments', 
+           'exercised_stock_options', 'restricted_stock', 'restricted_stock_deferred', 'total_stock_value']].transpose()
+
 # Checked instance 'Kaminski'. It doesn't look correct. He clearly didn't send 14k mails and just received 4600.
+print
+print "Mail features: 'from_messages' >= 5000"
+print data_Frame[ data_Frame['from_messages'] >= 5000 ][['poi']+mail_features].transpose()
+
 # I'll use median mail values for Kaminski as the current values are not trustworthy to me. 
 # Unfortunately I cannot resolve where or how the mail data was generated.
 data_Frame.loc['KAMINSKI WINCENTY J', mail_features] = data_Frame[mail_features].median()
+print
+print "Median values for mail_features for the instance ''KAMINSKI WINCENTY J'"
+print data_Frame.loc['KAMINSKI WINCENTY J', mail_features]
 
+# Create histograms for corrected features and save the image
+data_Frame.hist(bins=20,figsize=(20,15))
+plt.tight_layout()
+plt.savefig(IMAGES+"features_histogram_plots_corrected", dpi='figure')
+print
+print "Histogram plots created and saved. See './images/features_histogram_plots_corrected.png'."
+
+# Create box plots of corrected features
+# Logarytmic scale for some box plots
+log_list = ['from_messages', 'from_this_person_to_poi', 'total_payments', 'total_stock_value', 'other', 'restricted_stock', 'exercised_stock_options']
+helper.crt_plot(data_Frame, ["poi"] + features, shape=(5,4), log=log_list, sort=False, save=IMAGES+"features_box_plots_corrected", show=False)
+print
+print "Box plots created and saved. See './images/features_box_plots_corrected.png'."
+
+'''
 #############################
 ### Task 3: Create new feature(s)
 # Automatically create new features and correlate with 'poi'
@@ -115,7 +181,7 @@ my_dataset = data_Frame.transpose().to_dict()
 
 print data_Frame.head()
 
-'''
+
 ### Extract features and labels from dataset for local testing
 data = featureFormat(my_dataset, features_list, sort_keys = True)
 labels, features = targetFeatureSplit(data)

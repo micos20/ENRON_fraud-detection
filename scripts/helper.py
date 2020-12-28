@@ -6,9 +6,21 @@ import seaborn as sns
 from sklearn.metrics import precision_recall_curve, recall_score, precision_score
 from sklearn.base import BaseEstimator, clone
 from sklearn.model_selection import cross_val_predict
+from sklearn.ensemble import RandomForestClassifier
 from collections import defaultdict
 
-def crt_plot(data, features, type='box', figsize=(20,15), shape=(1,1), log=[], bins=10, sort=True, color='orange', save=False):
+def repl_NaN(val):
+    '''
+    Replaces string 'NaN' by numpy.NaN type and boolean type by integer 1 for 'True' and 0 for 'False'
+    '''
+    if val == 'NaN':
+        val = np.NaN
+    if isinstance(val, bool):
+        val = int(val)
+    return val
+
+
+def crt_plot(data, features, type='box', figsize=(20,15), shape=(1,1), log=[], bins=10, sort=True, color='orange', save=False, show=True):
     '''
     Creates multiple boxplots from dataframe and organizes plots in 2D matrix.
     ---
@@ -43,7 +55,9 @@ def crt_plot(data, features, type='box', figsize=(20,15), shape=(1,1), log=[], b
     plt.tight_layout()
     if save is not False:
         plt.savefig(save, dpi='figure')
-    plt.show()
+    if show:
+        plt.show()
+    
     return None
 
 # Correlates feature combinations of data frame columns with selected feature
@@ -187,21 +201,36 @@ class flex_classifier(BaseEstimator):
         #self.classifier.kernel = kernel
         #self.classifier.gamma = gamma
         #self.classifier.C = C
-
+        if type(classifier) == RandomForestClassifier:
+            self.method = 'predict_proba'
+        else:
+            self.method = 'decision_function'
+        
     def fit(self, X, y=None):
         self.classifier.fit(X, y)
         #self.threshold = self.det_threshold(X, y)
         return self
     
     def predict(self, X):
-        df_h = self.classifier.decision_function(X) - self.threshold
+        if self.method == 'decision_function':
+            df_h = self.classifier.decision_function(X) - self.threshold
+        else:
+            df_h = self.classifier.predict_proba(X)[:,1] - (0.499999 - self.threshold)
+        
         y_h = df_h >= self.threshold
         return y_h.astype('uint8')
 
     def det_threshold(self, X, y, replace=True):
-        scores = cross_val_predict(self.classifier, X, y, cv=6, method='decision_function')
+        '''
+        Determine best theshold to achieve given precision and recall values
+        '''
+        if self.method == 'predict_proba':
+            scores = cross_val_predict(self.classifier, X, y, cv=6, method=self.method)[:,1] - 0.499999
+        else:
+            scores = cross_val_predict(self.classifier, X, y, cv=6, method=self.method)
+        
         ranked = np.sort(scores)
-        predict = (scores >= 0).astype('uint8')
+        predict = (scores >= 0.).astype('uint8')
         recall = recall_score(y, predict)
         precision = precision_score(y, predict)
  
@@ -217,7 +246,7 @@ class flex_classifier(BaseEstimator):
         threshold_matrix = [ [self.threshold, recall, precision], ]
         if self.maximize == 'recall':
             for threshold in (score for score in ranked[::-1] if score < 0 ):
-                predict = (scores-threshold >= 0).astype('uint8')
+                predict = (scores-threshold >= 0.).astype('uint8')
                 recall = recall_score(y, predict)
                 precision = precision_score(y, predict)
                 threshold_matrix.append([threshold, recall, precision])

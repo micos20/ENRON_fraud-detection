@@ -2,6 +2,7 @@
 
 import pandas as pd
 import numpy as np
+import scipy.stats as stats
 import helper
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -276,33 +277,13 @@ print
 # Plot precision vs recall curve for 10 best features leading to highest ROC
 plt.clf()
 RFE_10 = RFE(SVC_lin, n_features_to_select=10).fit(X_train_44, y_train)
-X_train_44_ = RFE_10.transform(X_train_44)
-y_scores = cross_val_predict(SVC_lin, X_train_44_, y_train, cv=6, method='decision_function')
+X_train_44_10 = RFE_10.transform(X_train_44)
+y_scores = cross_val_predict(SVC_lin, X_train_44_10, y_train, cv=6, method='decision_function')
 print roc_auc_score(y_train, y_scores), "ROC AUC for 10 best features."
 precision, recall, proba = precision_recall_curve(y_train, y_scores)
-helper.plt_precision_vs_recall(precision, recall, title='SVC 10 best features', save=IMAGES+"RFE_precision_vs_recall.png")
-
-
-
-'''
-
-
-feature_list = ['poi'] + payment_features + stock_features + mail_features + extra_features
-
-# Create data frame containing all features to be used
-data_Frame = data_Frame[ feature_list ]
-
-
-### Store to my_dataset for easy export below.
-my_dataset = data_Frame.transpose().to_dict()
-
-print data_Frame.head()
-
-
-### Extract features and labels from dataset for local testing
-data = featureFormat(my_dataset, features_list, sort_keys = True)
-labels, features = targetFeatureSplit(data)
-
+helper.plt_precision_vs_recall(precision, recall, title='SVC 10 best features', save=IMAGES+"RFE_precision_vs_recall.png", label='untuned_SVC', color='blue')
+print "Image 'RFE_precision_vs_recall.png' saved."
+print
 
 
 ### Task 4: Try a varity of classifiers
@@ -312,8 +293,9 @@ labels, features = targetFeatureSplit(data)
 ### http://scikit-learn.org/stable/modules/pipeline.html
 
 # Provided to give you a starting point. Try a variety of classifiers.
-from sklearn.naive_bayes import GaussianNB
-clf = GaussianNB()
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+# Support Vector Classifier
+clf = svm.SVC()
 
 ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
 ### using our testing script. Check the tester.py script in the final project
@@ -322,11 +304,21 @@ clf = GaussianNB()
 ### stratified shuffle split cross validation. For more info: 
 ### http://scikit-learn.org/stable/modules/generated/sklearn.cross_validation.StratifiedShuffleSplit.html
 
-# Example starting point. Try investigating other evaluation techniques!
-from sklearn.cross_validation import train_test_split
-features_train, features_test, labels_train, labels_test = \
-    train_test_split(features, labels, test_size=0.3, random_state=42)
+# Random search to find best set of features
+param_distributions = {
+            'kernel': ['linear', 'rbf'],
+            'C': stats.halfnorm(0.1, 10000),
+            'gamma': stats.expon(scale=1.0),
+        }
+SVC_RandSearch = RandomizedSearchCV(clf, param_distributions, cv=6, n_iter=5000, scoring='roc_auc', iid=False, verbose=1, n_jobs=8, random_state=77)
+SVC_RandSearch.fit(X_train_44_10, y_train)
 
+y_scores = cross_val_predict(SVC_RandSearch.best_estimator_, X_train_44_10, y_train, cv=6, method='decision_function')
+print roc_auc_score(y_train, y_scores), "ROC AUC curve for tuned SVM classifier"
+precision, recall, proba = precision_recall_curve(y_train, y_scores)
+helper.plt_precision_vs_recall(precision, recall, title='ROC AUC curve for tuned SVM classifier', save=IMAGES+"ROC_AUC_curve_tuned_SVC.png", label='tuned_SVC', color='red')
+
+'''
 ### Task 6: Dump your classifier, dataset, and features_list so anyone can
 ### check your results. You do not need to change anything below, but make sure
 ### that the version of poi_id.py that you submit can be run on its own and

@@ -1,4 +1,7 @@
+
+
 # ENRON fraud detection
+
 Identify persons of interest (POIs) from ENRON financial and email data (educational purpose) 
 
 
@@ -230,14 +233,28 @@ In addition I plotted the precision vs recall curve for the selected 10 best fea
 
 ![](./images/RFE_precision_vs_recall.png)
 
+## 3. Model selection and tuning
 
+I choose two different algorithms, a Support Vector Classifier (SVC) and a Stochastic Gradient Descent Classifier (SGD). In order to tune the algorithm I use a cross validated randomized search algorithm (RandomizedSearchCV) with 5000 iterations to find the best hyper parameters. 
 
+Tuning the model's parameters helps optimizing the algorithm to perform better. We use the training data to optimize these parameters. Optimization to the training data may lead to over-fitting, so that the resulting model might not generalize well on the test set or in real life operation. In order to minimize over-fitting I use a cross validation approach to tune the parameters of the model.     
 
+#### Support Vector Machine    
 
-----
+The following parameters are tuned:
 
-## Model selection and optimization
+```python
+`param_distributions = {`
+            `'kernel': ['linear', 'rbf'],`
+            `'C': stats.uniform(0.1, 10000),`
+            `'gamma': stats.expon(scale=1.0),`
+        }`
+```
 
+I try a linear and *RBF* kernel. The regulation parameter C is randomly chosen between 0.1 and 10000. The last parameter is gamma for witch I use a exponential distribution function. The precision vs recall curves for the tuned and untuned model can be seen in the image below.
 
+![](./images/ROC_AUC_curve_tuned_SVC.png)
+
+#### Stochastic Gradient Descent
 
  

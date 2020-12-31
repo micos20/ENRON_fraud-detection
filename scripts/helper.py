@@ -169,7 +169,7 @@ def plt_precision_vs_recall(precision, recall, title=False, save=False, **kwargs
     plt.xticks(fontsize='xx-large')
     plt.yticks(fontsize='xx-large')
     if 'label' in kwargs.keys():
-        plt.legend()
+        plt.legend(fontsize=20)
     if title != False:
         plt.title(title, fontsize=30)
     if save != False:

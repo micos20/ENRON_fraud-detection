@@ -8,6 +8,9 @@ import seaborn as sns
 import sys
 import pickle
 sys.path.append("../tools/")
+from sklearn.metrics import confusion_matrix, precision_recall_curve, recall_score, precision_score, roc_curve, roc_auc_score
+from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score
+
 
 from feature_format import featureFormat, targetFeatureSplit
 from tester import dump_classifier_and_data
@@ -140,17 +143,23 @@ helper.crt_plot(data_Frame, ["poi"] + features, shape=(5,4), log=log_list, sort=
 print
 print "Box plots created and saved. See './images/features_box_plots_corrected.png'."
 
-'''
+
 #############################
 ### Task 3: Create new feature(s)
-# Automatically create new features and correlate with 'poi'
-#corr_list = payment_features + stock_features + mail_features
-#corr_df = helper.correlate(data_Frame, 'poi', feature_list=corr_list)
-#print corr_df[ corr_df['corr'] > 0.15 ]
+
+# Remove 'loan_advances' from features list
+features.remove('loan_advances')
+payment_features.remove('loan_advances')
 
 # Add email features (POI rates for send and received emails)
 data_Frame['toPOI_rate']                                = data_Frame['from_this_person_to_poi'].div(data_Frame['from_messages'])
 data_Frame['fromPOI_rate']                              = data_Frame['from_poi_to_this_person'].div(data_Frame['to_messages'])
+
+# Automatically create new features and calculate pearson correlation coef.
+# corr_list = list(feature_list)
+corr_df = helper.correlate(data_Frame, 'poi', feature_list=features)
+print
+print corr_df[ corr_df['corr'] > 0.25 ]
 
 # Create new financial features
 data_Frame['bonus_deferral_payments_rate']              = data_Frame['bonus'].div( data_Frame['deferral_payments'] )
@@ -161,14 +170,122 @@ data_Frame['long_term_incentive_total_payments_rate']   = data_Frame['long_term_
 data_Frame['bonus_total_payments_rate']                 = data_Frame['bonus'].div( data_Frame['total_payments'] )
 data_Frame['exer_stock_options_total_payments_rate']    = data_Frame['exercised_stock_options'].div( data_Frame['total_payments'] )
 
+extra_finance    = ['bonus_deferral_payments_rate', 'rest_stock_deferral_payments_rate', 'exer_stock_options_deferral_payments_rate',
+                    'long_term_incentive_total_payments_rate', 'bonus_total_payments_rate', 'exer_stock_options_total_payments_rate']
+extra_mail       = ['toPOI_rate', 'fromPOI_rate']
 
-# Create feature list
-payment_features = ['salary', 'bonus', 'long_term_incentive', 'deferred_income', 'deferral_payments', 'other', 'expenses', 'director_fees', 'total_payments']
-stock_features   = ['exercised_stock_options', 'restricted_stock', 'restricted_stock_deferred', 'total_stock_value']
-mail_features    = ['from_this_person_to_poi', 'from_poi_to_this_person', 'shared_receipt_with_poi']
-extra_features = ['bonus_deferral_payments_rate', 'rest_stock_deferral_payments_rate', 'exer_stock_options_deferral_payments_rate',
-                  'long_term_incentive_total_payments_rate', 'bonus_total_payments_rate', 'exer_stock_options_total_payments_rate',
-                  'toPOI_rate', 'fromPOI_rate']
+# Imputation strategies
+# ---------------------
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import FunctionTransformer, StandardScaler, RobustScaler, PowerTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+
+# I'd like to explore different strategies filling NAN values
+# Imputer_01:
+# Applies median to mail and extra NAN features and 0 to financial NAN features
+impute_01 = ColumnTransformer(
+     [('finance_data',  SimpleImputer(missing_values=np.nan, strategy='constant', fill_value=0.0), payment_features+stock_features),
+      ('mail_data',     SimpleImputer(missing_values=np.nan, strategy='median'), mail_features),
+      ('extra_finance', SimpleImputer(missing_values=np.nan, strategy='median'), extra_finance),
+      ('extra_mail',    SimpleImputer(missing_values=np.nan, strategy='median'), extra_mail)],
+     remainder='passthrough')
+# Imputer_02:
+# Applies median to all NAN features 
+impute_02 = SimpleImputer(strategy='median')
+# Imputer_03:
+# Applies 0.0 to all NAN features
+impute_03 = SimpleImputer(strategy='constant', fill_value=0.0)
+# Imputer 04
+# Applies 0.0 to financial and extra_finance featurtes and median to 'mail_features' and 'extra_mail'
+impute_04 = ColumnTransformer(
+     [('finance_data',  SimpleImputer(missing_values=np.nan, strategy='constant', fill_value=0.0), payment_features+stock_features),
+      ('mail_data',     SimpleImputer(missing_values=np.nan, strategy='median'), mail_features),
+      ('extra_finance', SimpleImputer(missing_values=np.nan, strategy='constant', fill_value=0.0), extra_finance),
+      ('extra_mail',    SimpleImputer(missing_values=np.nan, strategy='median'), extra_mail)],
+     remainder='passthrough')
+# Imputer 05
+# Applies mean values to all NAN
+impute_05 = SimpleImputer(strategy='mean')
+imputers = [impute_01, impute_02, impute_03, impute_04, impute_05]
+
+# Feature scaling
+# Define different scaling strategies
+robust_scl = RobustScaler()
+std_scl    = StandardScaler()
+power_scl  = PowerTransformer(method='yeo-johnson')
+scalers = [robust_scl, std_scl, power_scl]
+scaler_names = ['NO SCALING', 'ROBUST SCALER', 'STANDARD SCALER', 'POWER SCALER']
+
+# Build pipelines for imputation and scaling
+pipe_44 = Pipeline([ ('impute_04', impute_04), ('scale', power_scl) ])
+
+features.remove('to_messages')
+features.remove('from_messages')
+mail_features.remove('to_messages')
+mail_features.remove('from_messages')
+features = features + extra_finance + extra_mail
+
+# Divide data into features and labels 
+y = data_Frame['poi'].copy().astype(np.uint8)
+X = data_Frame[features].copy()
+# Split data into training and test set using stratified splitting
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=77, stratify=y) 
+
+#X_train_41 = pipe_41.fit_transform(X_train);
+X_train_44 = pipe_44.fit_transform(X_train);
+X_train_44_df = pd.DataFrame(X_train_44, columns=features)
+
+# Feature reduction using SelectKBest
+from sklearn.feature_selection import SelectKBest, SelectPercentile, f_regression, SelectFdr, SelectFpr
+KBest = SelectKBest(k=24)
+KBest.fit_transform(X_train_44, y_train)
+KBest_scores_df = pd.DataFrame(KBest.scores_, index=features)
+print
+print "Feature reduction"
+print "-----------------"
+print "SelectKBest scores:"
+print KBest_scores_df.sort_values(0, ascending=False)
+print
+
+from sklearn import svm
+SVC_lin = svm.SVC(gamma='auto', kernel='linear')
+print "ROC AUC scores for SelectKBest features:"
+for n in range(1, len(features)+1):
+    KBest = SelectKBest(k=n)
+    X_train_44_ = KBest.fit_transform(X_train_44, y_train)
+    y_scores = cross_val_predict(SVC_lin, X_train_44_, y_train, cv=6, method='decision_function')
+    print roc_auc_score(y_train, y_scores), "ROC AUC for", n, "features."
+print
+
+# Feature reduction using RFE
+from sklearn.feature_selection import RFE, RFECV
+RFE_1 = RFE(SVC_lin, n_features_to_select=1).fit(X_train_44, y_train)
+score_table = pd.DataFrame(zip(X_train_44_df.columns.to_list(), RFE_1.ranking_))
+print "RFE ranking of features"
+print score_table.sort_values(1, ascending=True)
+print
+
+print "ROC AUC scores for RFE best features:"
+for n in range(1, len(features)+1):
+    X_train_44_ = RFE(SVC_lin, n_features_to_select=n).fit_transform(X_train_44, y_train)
+    y_scores = cross_val_predict(SVC_lin, X_train_44_, y_train, cv=6, method='decision_function')
+    print roc_auc_score(y_train, y_scores), "ROC AUC for", n, "features."
+print
+
+# Plot precision vs recall curve for 10 best features leading to highest ROC
+plt.clf()
+RFE_10 = RFE(SVC_lin, n_features_to_select=10).fit(X_train_44, y_train)
+X_train_44_ = RFE_10.transform(X_train_44)
+y_scores = cross_val_predict(SVC_lin, X_train_44_, y_train, cv=6, method='decision_function')
+print roc_auc_score(y_train, y_scores), "ROC AUC for 10 best features."
+precision, recall, proba = precision_recall_curve(y_train, y_scores)
+helper.plt_precision_vs_recall(precision, recall, title='SVC 10 best features', save=IMAGES+"RFE_precision_vs_recall.png")
+
+
+
+'''
+
 
 feature_list = ['poi'] + payment_features + stock_features + mail_features + extra_features
 
@@ -189,7 +306,7 @@ labels, features = targetFeatureSplit(data)
 
 
 ### Task 4: Try a varity of classifiers
-### Please name your classifier clf for easy export below.
+### Please name your classifier clf for easy export below. 
 ### Note that if you want to do PCA or other multi-stage operations,
 ### you'll need to use Pipelines. For more info:
 ### http://scikit-learn.org/stable/modules/pipeline.html

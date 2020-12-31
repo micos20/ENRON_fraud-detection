@@ -60,26 +60,35 @@ def crt_plot(data, features, type='box', figsize=(20,15), shape=(1,1), log=[], b
     
     return None
 
-# Correlates feature combinations of data frame columns with selected feature
+# 
 def correlate(frame, corr, feature_list=None):
-    correlations = []
+    '''
+    Correlates feature combinations of data frame columns with selected feature. 
+    It automatically creates new features by dividing every feature in 'frame' by all other features in 'feature_list'.
+    New features are correlated to 'corr' column and the results are returned as pandas data frame in the form:
+    'feature', 'divisor', 'pearson correlation', 'number of data points'
+    '''
+    correlations = []   # store correlation results
     if feature_list == None:
         feature_list = frame.columns
     for feature in feature_list:
         for divisor in feature_list:
             if feature == divisor:
-                continue
+                continue   # skip correlations with same column
             try:
                 new_feature = frame[feature].div( frame[divisor] )
             except ZeroDivisionError:
                 print "division is zero. Value skipped."
                 continue
+            
             values = new_feature.count()
             corr_poi = frame.corrwith(new_feature)[corr]
+            
             if not np.isnan(corr_poi):
                 correlations.append( [feature, divisor, corr_poi, values] )
     correlations.sort(key=lambda x: abs(x[2]), reverse=True)
-    corr_frame = pd.DataFrame(correlations, columns=['feature', 'divisor', 'corr', 'count_instances'])
+    corr_frame = pd.DataFrame(correlations, columns=['numerator', 'denominator', 'corr', 'count_instances'])
+    
     return corr_frame
 
 
@@ -151,16 +160,20 @@ def plt_precision_recall_vs_threshold(precision, recall, threshold, title=False)
         
     return None
 
-def plt_precision_vs_recall(precision, recall, title=False, **kwargs):
-    plt.plot(recall, precision, "b-", linewidth=1, **kwargs)
-    plt.xlabel("Recall", fontsize=12)
-    plt.ylabel("Precision", fontsize=12)
+def plt_precision_vs_recall(precision, recall, title=False, save=False, **kwargs):
+    plt.plot(recall, precision, "b-", linewidth=2, **kwargs)
+    plt.xlabel("Recall", fontsize=20)
+    plt.ylabel("Precision", fontsize=20)
     plt.axis([0, 1, 0, 1])
     plt.grid(True)
+    plt.xticks(fontsize='xx-large')
+    plt.yticks(fontsize='xx-large')
     if 'label' in kwargs.keys():
         plt.legend()
     if title != False:
-        plt.title(title)
+        plt.title(title, fontsize=30)
+    if save != False:
+        plt.savefig(save, dpi=75, bbox_inches='tight', pad_inches=0.5)
     return None
 
 

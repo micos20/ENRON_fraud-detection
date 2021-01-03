@@ -161,7 +161,7 @@ def plt_precision_recall_vs_threshold(precision, recall, threshold, title=False)
     return None
 
 def plt_precision_vs_recall(precision, recall, title=False, save=False, **kwargs):
-    plt.plot(recall, precision, "b-", linewidth=2, **kwargs)
+    plt.plot(recall, precision, "b-", linewidth=5., **kwargs)
     plt.xlabel("Recall", fontsize=20)
     plt.ylabel("Precision", fontsize=20)
     plt.axis([0, 1, 0, 1])

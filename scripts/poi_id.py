@@ -11,10 +11,14 @@ import pickle
 sys.path.append("../tools/")
 from sklearn.metrics import confusion_matrix, precision_recall_curve, recall_score, precision_score, roc_curve, roc_auc_score
 from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
+from warnings import simplefilter
+# ignore all future warnings
+simplefilter(action='ignore', category=FutureWarning)
 
 from feature_format import featureFormat, targetFeatureSplit
-from tester import dump_classifier_and_data
+from tester import dump_classifier_and_data, test_classifier
 
 IMAGES = '../images/'
 DATA   = '../data/'
@@ -231,72 +235,24 @@ features = features + extra_finance + extra_mail
 y = data_Frame['poi'].copy().astype(np.uint8)
 X = data_Frame[features].copy()
 # Split data into training and test set using stratified splitting
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=77, stratify=y) 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=77, stratify=y) 
+
+# Save the order of insiders
+insiders_train = y_train.index
+insiders_test  = y_test.index
 
 #X_train_41 = pipe_41.fit_transform(X_train);
 X_train_44 = pipe_44.fit_transform(X_train);
+X_test_44  = pipe_44.fit_transform(X_test);
+
 X_train_44_df = pd.DataFrame(X_train_44, columns=features)
-
-# Feature reduction using SelectKBest
-from sklearn.feature_selection import SelectKBest, SelectPercentile, f_regression, SelectFdr, SelectFpr
-KBest = SelectKBest(k=24)
-KBest.fit_transform(X_train_44, y_train)
-KBest_scores_df = pd.DataFrame(KBest.scores_, index=features)
-print
-print "Feature reduction"
-print "-----------------"
-print "SelectKBest scores:"
-print KBest_scores_df.sort_values(0, ascending=False)
-print
-
-from sklearn import svm
-SVC_lin = svm.SVC(gamma='auto', kernel='linear')
-print "ROC AUC scores for SelectKBest features:"
-for n in range(1, len(features)+1):
-    KBest = SelectKBest(k=n)
-    X_train_44_ = KBest.fit_transform(X_train_44, y_train)
-    y_scores = cross_val_predict(SVC_lin, X_train_44_, y_train, cv=6, method='decision_function')
-    print roc_auc_score(y_train, y_scores), "ROC AUC for", n, "features."
-print
-
-# Feature reduction using RFE
-from sklearn.feature_selection import RFE, RFECV
-RFE_1 = RFE(SVC_lin, n_features_to_select=1).fit(X_train_44, y_train)
-score_table = pd.DataFrame(zip(X_train_44_df.columns.to_list(), RFE_1.ranking_))
-print "RFE ranking of features"
-print score_table.sort_values(1, ascending=True)
-print
-
-print "ROC AUC scores for RFE best features:"
-for n in range(1, len(features)+1):
-    X_train_44_ = RFE(SVC_lin, n_features_to_select=n).fit_transform(X_train_44, y_train)
-    y_scores = cross_val_predict(SVC_lin, X_train_44_, y_train, cv=6, method='decision_function')
-    print roc_auc_score(y_train, y_scores), "ROC AUC for", n, "features."
-print
-
-# Plot precision vs recall curve for 10 best features leading to highest ROC
-plt.clf()
-RFE_10 = RFE(SVC_lin, n_features_to_select=10).fit(X_train_44, y_train)
-X_train_44_10 = RFE_10.transform(X_train_44)
-y_scores = cross_val_predict(SVC_lin, X_train_44_10, y_train, cv=6, method='decision_function')
-print roc_auc_score(y_train, y_scores), "ROC AUC for 10 best features."
-precision, recall, proba = precision_recall_curve(y_train, y_scores)
-helper.plt_precision_vs_recall(precision, recall, title='SVC 10 best features', save=IMAGES+"RFE_precision_vs_recall.png", label='untuned_SVC', color='blue')
-print "Image 'RFE_precision_vs_recall.png' saved."
-print
-
 
 ### Task 4: Try a varity of classifiers
 ### Please name your classifier clf for easy export below. 
 ### Note that if you want to do PCA or other multi-stage operations,
 ### you'll need to use Pipelines. For more info:
 ### http://scikit-learn.org/stable/modules/pipeline.html
-
 # Provided to give you a starting point. Try a variety of classifiers.
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
-# Support Vector Classifier
-clf = svm.SVC()
-
 ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
 ### using our testing script. Check the tester.py script in the final project
 ### folder for details on the evaluation method, especially the test_classifier
@@ -304,25 +260,338 @@ clf = svm.SVC()
 ### stratified shuffle split cross validation. For more info: 
 ### http://scikit-learn.org/stable/modules/generated/sklearn.cross_validation.StratifiedShuffleSplit.html
 
+
+# 1 Try: Support Vector Classifier
+
+##################################################
+#### Feature reduction using RFECV for SVC model #
+##################################################
+from sklearn import svm
+SVC_lin = svm.SVC(gamma='auto', kernel='linear')
+
+# Feature reduction using RFEVC
+from sklearn.feature_selection import RFE, RFECV
+RFECV_ = RFECV(SVC_lin, cv=6, min_features_to_select=5, scoring='roc_auc').fit(X_train_44, y_train)
+
+
+# Plot precision vs recall curve for best features leading to highest ROC
+plt.clf()
+y_scores = cross_val_predict(SVC_lin, X_train_44[:,RFECV_.support_], y_train, cv=6, method='decision_function')
+print roc_auc_score(y_train, y_scores), "ROC AUC for best SVC features"
+precision, recall, proba = precision_recall_curve(y_train, y_scores)
+helper.plt_precision_vs_recall(precision, recall, title='SVC RFECV best features (untuned)', label='untuned_SVC', color='blue', linestyle='--')
+
+# Create feature set for SVC model
+X_train_44_SVC = RFECV_.transform(X_train_44)
+X_test_44_SVC  = RFECV_.transform(X_test_44)
+SVC_features = helper.get_features(features, RFECV_.support_)
+print "SVC features:"
+print SVC_features
+
+# General Support Vector Classifier for tuning hyperparameters
+SVC_clf = svm.SVC()
+
 # Random search to find best set of features
 param_distributions = {
             'kernel': ['linear', 'rbf'],
             'C': stats.halfnorm(0.1, 10000),
             'gamma': stats.expon(scale=1.0),
         }
-SVC_RandSearch = RandomizedSearchCV(clf, param_distributions, cv=6, n_iter=5000, scoring='roc_auc', iid=False, verbose=1, n_jobs=8, random_state=77)
-SVC_RandSearch.fit(X_train_44_10, y_train)
+SVC_RandSearch = RandomizedSearchCV(SVC_clf, param_distributions, cv=6, n_iter=5000, scoring='roc_auc', iid=False, verbose=1, n_jobs=8, random_state=77)
+print
+print "Randomizes Search for best hyperparameters for the SVC model"
+SVC_RandSearch.fit(X_train_44_SVC, y_train)
 
-y_scores = cross_val_predict(SVC_RandSearch.best_estimator_, X_train_44_10, y_train, cv=6, method='decision_function')
+SVC_clf = SVC_RandSearch.best_estimator_
+print
+print "Best parameters for SVC model:"
+print SVC_RandSearch.best_params_
+
+y_scores = cross_val_predict(SVC_clf, X_train_44_SVC, y_train, cv=6, method='decision_function')
 print roc_auc_score(y_train, y_scores), "ROC AUC curve for tuned SVM classifier"
 precision, recall, proba = precision_recall_curve(y_train, y_scores)
-helper.plt_precision_vs_recall(precision, recall, title='ROC AUC curve for tuned SVM classifier', save=IMAGES+"ROC_AUC_curve_tuned_SVC.png", label='tuned_SVC', color='red')
+helper.plt_precision_vs_recall(precision, recall, title='ROC AUC curve for tuned SVM classifier', label='tuned_SVC', color='red', alpha=0.6)
 
-'''
+# print SVC feature scores
+score_table = pd.DataFrame(zip(X_train_44_df.columns.to_list(), RFECV_.ranking_))
+print "RFECV ranking of features for SVC model"
+print score_table.sort_values(1, ascending=True)
+print
+
+
+
+# 2. Try: Stochastic Gradient Descent classifier
+
+################################################
+#### Feature reduction using RFE for SGD model #
+################################################
+from sklearn.linear_model import SGDClassifier
+
+# Try different 'learning_rate' values 
+print
+print "Randomizes Search for best hyperparameters for the SGD models"
+
+Results = {}
+learning_rate = ['optimal', 'constant', 'invscaling', 'adaptive'] 
+learning_rate = ['optimal']   # delete this line to run parameter search for all different learning_rate options
+
+for lr in learning_rate:
+    if lr == 'optimal':
+        SGD_clf = SGDClassifier(random_state=77, loss='hinge', learning_rate='optimal')
+        param_distributions = {
+            'penalty': ['l2', 'l1'],
+            'alpha': stats.uniform(10**(-6), 50),
+        }
+        
+    elif lr == 'invscaling':
+        SGD_clf = SGDClassifier(random_state=77, loss='hinge', learning_rate='invscaling', eta0=0.01)
+        param_distributions = {
+            'penalty': ['l2', 'l1'],
+            'alpha': stats.uniform(10**(-6), 50),
+            'eta0': stats.uniform(10**-12,20),
+            'power_t': stats.uniform(10**-12,5)
+        }
+    elif lr == 'constant':
+        SGD_clf = SGDClassifier(random_state=77, loss='hinge', learning_rate='constant', eta0=0.01)
+        param_distributions = {
+            'penalty': ['l2', 'l1'],
+            'alpha': stats.uniform(10**(-6), 50),
+            'eta0': stats.uniform(10**-12,20)
+        }
+    else:
+        SGD_clf == SGDClassifier(random_state=77, loss='hinge', learning_rate='adaptive', eta0=0.01)
+        param_distributions = {
+            'penalty': ['l2', 'l1'],
+            'alpha': stats.uniform(10**(-6), 50),
+            'eta0': stats.uniform(10**-12,20)
+        }
+        
+    #RFE_ = RFE(SGD_clf).fit(X_train_44, y_train)        
+    RFECV_ = RFECV(SGD_clf, cv=6, min_features_to_select=5, scoring='roc_auc').fit(X_train_44, y_train)
+    X_train_44_SGD = RFECV_.transform(X_train_44)
+    SGD_features = helper.get_features(features, RFECV_.support_)
+       
+    #X_train_44_red = pipe_44.transform(X_train)[:, RFE_.ranking_ <= 1]    
+    RandSearch = RandomizedSearchCV(SGD_clf, param_distributions, cv=6, n_iter=5000, scoring='roc_auc', iid=False, verbose=1, n_jobs=4, random_state=77)        
+    RandSearch.fit(X_train_44_SGD, y_train)
+
+    Results[lr] = {'params': RandSearch.best_params_,
+                   'ROC_AUC': RandSearch.best_score_,
+                   'classifier': RandSearch.best_estimator_,
+                   'features': SGD_features,
+                   'support': RFECV_.support_,
+                   'ranking': RFECV_.ranking_}
+
+print     
+for key in Results.keys():
+    print "SGD + learning_rate =", key + ":"
+    print "ROC AUC:", Results[key]['ROC_AUC']
+    print "Best parameters:"
+    print Results[key]['params']
+    print
+
+# Choose SGD with learning_rate=optimal as it shows highest ROC AUC
+SGD_clf = Results['optimal']['classifier']
+X_train_44_SGD = X_train_44[:, Results['optimal']['support']]
+X_test_44_SGD  = X_test_44[:, Results['optimal']['support']]
+# print X_train_44_SGD.shape
+SGD_features = Results['optimal']['features']
+print "SGD features:"
+print SGD_features
+
+print
+print "Best parameters for SGD model:"
+print Results['optimal']['params']
+print
+
+# print SGD feature scores
+score_table = pd.DataFrame(zip(X_train_44_df.columns.to_list(), Results['optimal']['ranking']))
+print "RFECV ranking of features for SGD model"
+print score_table.sort_values(1, ascending=True)
+print
+
+# Plot untuned SGD precision vs recall curve
+y_scores = cross_val_predict(SGDClassifier(random_state=77, loss='hinge', learning_rate='optimal'), X_train_44_SGD, y_train, cv=6, method='decision_function')
+print roc_auc_score(y_train, y_scores), "ROC AUC curve for untuned SGD classifier"
+precision, recall, proba = precision_recall_curve(y_train, y_scores)
+helper.plt_precision_vs_recall(precision, recall, title='ROC AUC curve for untuned SGD classifier', label='untuned_SGD (optimal)', color='yellow', linestyle='--')
+
+# Plot tuned SGD precision vs recall curve
+y_scores = cross_val_predict(SGD_clf, X_train_44_SGD, y_train, cv=6, method='decision_function')
+print roc_auc_score(y_train, y_scores), "ROC AUC curve for tuned SGD classifier"
+precision, recall, proba = precision_recall_curve(y_train, y_scores)
+helper.plt_precision_vs_recall(precision, recall, title='Comparison of precision vs recall curves for SVC and SGD classifiers on train sets', label='tuned_SGD (optimal)', save=IMAGES+"precision_vs_recall_on_train_set.png", color='green', alpha=0.6)
+
+
+######################
+### Model validation #
+######################
+print
+print "################"
+print "Model Validation"
+print "################"
+print
+# Validate against the test set
+
+# Fit classifiers to whole train set
+SVC_clf.fit(X_train_44_SVC, y_train)
+SGD_clf.fit(X_train_44_SGD, y_train)
+
+print
+print "SVC scores on test set:"
+plt.clf()
+# Plot SVC precision vs recall
+y_scores = SVC_clf.decision_function(X_test_44_SVC)
+print roc_auc_score(y_test, y_scores), "ROC AUC for SVM classifier."
+precision, recall, proba = precision_recall_curve(y_test, y_scores)
+helper.plt_precision_vs_recall(precision, recall, label='SVM classifier', color='red')
+y_predict = SVC_clf.predict(X_test_44_SVC)
+print
+print "Confusion matrix:"
+print confusion_matrix(y_test, y_predict)
+print "Precision score:", precision_score(y_test, y_predict)
+print "Recall score:   ", recall_score(y_test, y_predict)
+
+print
+print "SGD scores on test set:"
+# Plot SGD precision vs recall
+y_scores = SGD_clf.decision_function(X_test_44_SGD)
+print roc_auc_score(y_test, y_scores), "ROC AUC for SGD classifier."
+precision, recall, proba = precision_recall_curve(y_test, y_scores)
+helper.plt_precision_vs_recall(precision, recall, label='SGD classifier', color='green', save=IMAGES+'precision_vs_recall_on_test_set.png', title='Comparison of precision vs recall curves for SVC and SGD classifiers on test set')
+y_predict = SGD_clf.predict(X_test_44_SGD)
+print
+print "Confusion matrix:"
+print confusion_matrix(y_test, y_predict)
+print "Precision score:", precision_score(y_test, y_predict)
+print "Recall score:   ", recall_score(y_test, y_predict)
+print
+
+###################################################################
+### Optimize precision/ recall trade-off by using flex-classifier #
+###################################################################
+print
+print "#############################################################"
+print "Optimize precision/ recall trade-off by using flex-classifier"
+print "#############################################################"
+print
+
+# Flex classifier for SVC model optimizing recall
+flex_SVC_clf = helper.flex_classifier(SVC_clf, min_precision=0.35, min_recall=0.4, maximize='recall')
+flex_SVC_clf.fit(X_train_44_SVC, y_train)
+from sklearn.model_selection import StratifiedShuffleSplit
+cv = StratifiedShuffleSplit(n_splits=10, random_state=77, test_size=0.35)
+
+thresholds = []
+for train_idx, test_idx in cv.split(X_train_44_SVC, y_train):
+    X_train_ = X_train_44_SVC[train_idx]
+    X_test_  = X_train_44_SVC[test_idx]
+    y_train_ = y_train[train_idx]
+    y_test_  = y_train[test_idx]
+    thresholds.append( list(flex_SVC_clf.det_threshold(X_train_, y_train_, replace=False)))
+
+thresholds = np.array(thresholds)
+best_threshold = thresholds[:,0].mean(axis=0)
+print
+print "Best threshold for SVC model:", best_threshold
+flex_SVC_clf.threshold = best_threshold
+
+print
+print "SVC scores on test set using flex classifier:"
+y_predict = flex_SVC_clf.predict(X_test_44_SVC)
+print
+print "Confusion matrix:"
+print confusion_matrix(y_test, y_predict)
+print "Precision score:", precision_score(y_test, y_predict)
+print "Recall score:   ", recall_score(y_test, y_predict)
+
+# Flex classifier for SGD model optimizing recall
+flex_SGD_clf = helper.flex_classifier(SGD_clf, min_precision=0.35, min_recall=0.4, maximize='recall')
+flex_SGD_clf.fit(X_train_44_SGD, y_train)
+from sklearn.model_selection import StratifiedShuffleSplit
+cv = StratifiedShuffleSplit(n_splits=10, random_state=77, test_size=0.35)
+
+thresholds = []
+for train_idx, test_idx in cv.split(X_train_44_SGD, y_train):
+    X_train_ = X_train_44_SGD[train_idx]
+    X_test_  = X_train_44_SGD[test_idx]
+    y_train_ = y_train[train_idx]
+    y_test_  = y_train[test_idx]
+    thresholds.append( list(flex_SGD_clf.det_threshold(X_train_, y_train_, replace=False)))
+
+thresholds = np.array(thresholds)
+best_threshold = thresholds[:,0].mean(axis=0)
+print
+print "Best threshold for SGD model:", best_threshold
+flex_SGD_clf.threshold = best_threshold
+
+print
+print "SGD scores on test set using flex classifier:"
+y_predict = flex_SGD_clf.predict(X_test_44_SGD)
+print
+print "Confusion matrix:"
+print confusion_matrix(y_test, y_predict)
+print "Precision score:", precision_score(y_test, y_predict)
+print "Recall score:   ", recall_score(y_test, y_predict)
+print
+
+
+####################################
+# Validate SVC model using tester.py
+print
+print "##########################"
+print "Validation using tester.py"
+print "##########################"
+print
+
+# Features
+X_train_44_SVC_df = pd.DataFrame(X_train_44_SVC, columns=SVC_features, index=insiders_train)
+X_test_44_SVC_df = pd.DataFrame(X_test_44_SVC, columns=SVC_features, index=insiders_test)
+X_44_df = X_train_44_SVC_df.append(X_test_44_SVC_df, sort=False)
+
+# Labels
+y_df = y_train.append(y_test)
+
+# Combine features and labels
+my_dataset = X_44_df.copy()
+my_dataset.insert(0, column='poi', value=y_df)
+
+# Create dataset dict for validation
+my_SVC_dataset_dict = my_dataset.transpose().to_dict() 
+
+# Validate SVC classifier
+print "Flex classifier results for SVC model using tester.py:"
+test_classifier(flex_SVC_clf, my_SVC_dataset_dict, ['poi'] + SVC_features)
+print
+
+# Validate SGD model using tester.py
+# Features
+X_train_44_SGD_df = pd.DataFrame(X_train_44_SGD, columns=SGD_features, index=insiders_train)
+X_test_44_SGD_df = pd.DataFrame(X_test_44_SGD, columns=SGD_features, index=insiders_test)
+X_44_df = X_train_44_SGD_df.append(X_test_44_SGD_df, sort=False)
+
+# Labels
+y_df = y_train.append(y_test)
+
+# Combine features and labels
+my_dataset = X_44_df.copy()
+my_dataset.insert(0, column='poi', value=y_df)
+
+# Create dataset dict for validation
+my_SGD_dataset_dict = my_dataset.transpose().to_dict() 
+
+# Validate SVC classifier
+print "Flex classifier results for SGD model using tester.py:"
+test_classifier(flex_SGD_clf, my_SGD_dataset_dict, ['poi'] + SGD_features)
+
+
 ### Task 6: Dump your classifier, dataset, and features_list so anyone can
 ### check your results. You do not need to change anything below, but make sure
 ### that the version of poi_id.py that you submit can be run on its own and
 ### generates the necessary .pkl files for validating your results.
 
+clf = flex_SGD_clf
+my_dataset = my_SGD_dataset_dict
+features_list = ['poi'] + SGD_features
+
 dump_classifier_and_data(clf, my_dataset, features_list)
-'''

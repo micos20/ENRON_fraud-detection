@@ -138,104 +138,46 @@ The final AI model is a Support Vector Classifier. Support Vector Machines are s
 
 #### Selection of features
 
-For feature selection I used the SelectKBest and recursive feature elimination (RFE) method. For the latter I used a linear SVM classifier as estimator. The scores and ranking of both methods can be found in the following two tables.  
+For feature selection I use cross validated recursive feature elimination (RFECV) method. An estimator is required to run RFECV method, so we will come up with different sets of features for each investigated classifier. RFECV provides feature rankings. All selected features will have rank 1. The remaining features are numbered in accordance to their importance. The results of feature ranking for a Support Vector classifier (SVC) and a Stochastic Gradient Descent classifier (SGD) are shown in the table below.  
 
-***Ranking of features by RFE method***
+***Ranking of features by RFECV method***
 
-| Rank | Feature                                   |
-| :--: | ----------------------------------------- |
-|  1   | expenses                                  |
-|  2   | total_stock_value                         |
-|  3   | exercised_stock_options                   |
-|  4   | toPOI_rate                                |
-|  5   | bonus                                     |
-|  6   | exer_stock_options_deferral_payments_rate |
-|  7   | rest_stock_deferral_payments_rate         |
-|  8   | bonus_deferral_payments_rate              |
-|  9   | deferred_income                           |
-|  10  | shared_receipt_with_poi                   |
-|  11  | salary                                    |
-|  12  | exer_stock_options_total_payments_rate    |
-|  13  | other                                     |
-|  14  | deferral_payments                         |
-|  15  | long_term_incentive_total_payments_rate   |
-|  16  | restricted_stock_deferred                 |
-|  17  | long_term_incentive                       |
-|  18  | bonus_total_payments_rate                 |
-|  19  | from_this_person_to_poi                   |
-|  20  | total_payments                            |
-|  21  | restricted_stock                          |
-|  22  | from_poi_to_this_person                   |
-|  23  | fromPOI_rate                              |
-|  24  | director_fees                             |
+| Feature                                   | SVC rank | SGD rank |
+| ----------------------------------------- | :------: | -------- |
+| expenses                                  |    1     | 1        |
+| total_stock_value                         |    1     | 1        |
+| exercised_stock_options                   |    1     | 1        |
+| toPOI_rate                                |    1     | 1        |
+| bonus                                     |    1     | 7        |
+| exer_stock_options_deferral_payments_rate |    1     | 1        |
+| rest_stock_deferral_payments_rate         |    1     | 3        |
+| bonus_deferral_payments_rate              |    1     | 1        |
+| deferred_income                           |    1     | 1        |
+| shared_receipt_with_poi                   |    1     | 1        |
+| salary                                    |    2     | 1        |
+| exer_stock_options_total_payments_rate    |    3     | 8        |
+| other                                     |    4     | 1        |
+| deferral_payments                         |    5     | 10       |
+| long_term_incentive_total_payments_rate   |    6     | 11       |
+| restricted_stock_deferred                 |    7     | 9        |
+| long_term_incentive                       |    8     | 1        |
+| bonus_total_payments_rate                 |    9     | 1        |
+| from_this_person_to_poi                   |    10    | 5        |
+| total_payments                            |    11    | 13       |
+| restricted_stock                          |    12    | 6        |
+| from_poi_to_this_person                   |    13    | 12       |
+| fromPOI_rate                              |    14    | 2        |
+| director_fees                             |    15    | 4        |
 
-**Scores based of SelectKBest algorithm**
+For the SVM classifier the selected features are *expenses, total_stock_value, exercised_stock_options, toPOI_rate, bonus, exer_stock_options_deferral_payments_rate, rest_stock_deferral_payments_rate, bonus_deferral_payments_rate, deferred_income* and *shared_receipt_with_poi*. It is interesting that 4 out of the 10 features are newly created features.
 
-| Rank | Feature                                   | Score     |
-| :--: | :---------------------------------------- | :-------- |
-|  1   | toPOI_rate                                | 16.262856 |
-|  2   | total_stock_value                         | 14.241934 |
-|  3   | bonus_total_payments_rate                 | 11.526630 |
-|  4   | expenses                                  | 10.429717 |
-|  5   | bonus                                     | 10.375911 |
-|  6   | other                                     | 10.141966 |
-|  7   | long_term_incentive                       | 8.855082  |
-|  8   | total_payments                            | 8.432336  |
-|  9   | restricted_stock                          | 7.226538  |
-|  10  | salary                                    | 7.109366  |
-|  11  | long_term_incentive_total_payments_rate   | 6.686345  |
-|  12  | shared_receipt_with_poi                   | 6.653376  |
-|  13  | from_this_person_to_poi                   | 5.487458  |
-|  14  | from_poi_to_this_person                   | 3.831456  |
-|  15  | deferred_income                           | 3.631673  |
-|  16  | restricted_stock_deferred                 | 2.038400  |
-|  17  | exer_stock_options_total_payments_rate    | 1.750332  |
-|  18  | director_fees                             | 1.680000  |
-|  19  | exercised_stock_options                   | 1.492036  |
-|  20  | fromPOI_rate                              | 0.553620  |
-|  21  | exer_stock_options_deferral_payments_rate | 0.227228  |
-|  22  | deferral_payments                         | 0.040150  |
-|  23  | bonus_deferral_payments_rate              | 0.024962  |
-|  24  | rest_stock_deferral_payments_rate         | 0.001848  |
+For the SGD model we have a different set of features as can be seen above. But again, 4 out of 12 features are newly created ones. 
 
-In order to select the best features I iterated over both ranked feature lists and performed a cross validation altering the number of best features (1, 2, 3 , .... best features) for each loop. The ROC AUC scores of this process is given below for the RFE feature selection method. Best ROC AUC score (0.944) we get for the 10 best features. Using more features reduces the performance of the model. 
 
-| Number of best RFE features | ROC AUC Score          |
-| --------------------------- | ---------------------- |
-| 1                           | 0.33333333333333337    |
-| 2                           | 0.6846590909090908     |
-| 3                           | 0.7954545454545454     |
-| 4                           | 0.9375000000000001     |
-| 5                           | 0.9214015151515151     |
-| 6                           | 0.9289772727272727     |
-| 78                          | 0.928030303030303      |
-| 8                           | 0.9346590909090909     |
-| 9                           | 0.9261363636363636     |
-| **10**                      | **0.9441287878787878** |
-| 11                          | 0.9261363636363636     |
-| 12                          | 0.9214015151515151     |
-| 13                          | 0.918560606060606      |
-| 14                          | 0.9109848484848484     |
-| 15                          | 0.9185606060606061     |
-| 16                          | 0.9109848484848484     |
-| 17                          | 0.9119318181818181     |
-| 18                          | 0.9138257575757576     |
-| 19                          | 0.9043560606060606     |
-| 20                          | 0.8996212121212122     |
-| 21                          | 0.8778409090909092     |
-| 22                          | 0.8740530303030303     |
-| 23                          | 0.8740530303030303     |
-| 24                          | 0.8740530303030303     |
-
-The selected features are *expenses, total_stock_value, exercised_stock_options, toPOI_rate, bonus, exer_stock_options_deferral_payments_rate, rest_stock_deferral_payments_rate, bonus_deferral_payments_rate, deferred_income* and *shared_receipt_with_poi*. It is interesting that 4 out of the 10 features are newly created features.
-
-In addition I plotted the precision vs recall curve for the selected 10 best features using a linear SVM classifier (cross validated results) using the training set.
-
-![](./images/RFE_precision_vs_recall.png)
 
 ## 3. Model selection and tuning
 
-I choose two different algorithms, a Support Vector Classifier (SVC) and a Stochastic Gradient Descent Classifier (SGD). In order to tune the algorithm I use a cross validated randomized search algorithm (RandomizedSearchCV) with 5000 iterations to find the best hyper parameters. 
+I choose two different algorithms, a Support Vector Classifier (SVC) and a Stochastic Gradient Descent Classifier (SGD). In order to tune the algorithms I use a cross validated randomized search algorithm (RandomizedSearchCV) with 5000 iterations to find the best hyper parameters. 
 
 Tuning the model's parameters helps optimizing the algorithm to perform better. We use the training data to optimize these parameters. Optimization to the training data may lead to over-fitting, so that the resulting model might not generalize well on the test set or in real life operation. In order to minimize over-fitting I use a cross validation approach to tune the parameters of the model.     
 
@@ -251,10 +193,54 @@ The following parameters are tuned:
         }`
 ```
 
-I try a linear and *RBF* kernel. The regulation parameter C is randomly chosen between 0.1 and 10000. The last parameter is gamma for witch I use a exponential distribution function. The precision vs recall curves for the tuned and untuned model can be seen in the image below.
+I try a linear and *RBF* kernel. The regulation parameter C is randomly chosen between 0.1 and 10000. The last parameter is gamma for witch I use a exponential distribution function. The best parameters for the SVC model are: 
 
-![](./images/ROC_AUC_curve_tuned_SVC.png)
+| Parameters of SVM classifier | Value       |
+| ---------------------------- | ----------- |
+| kernel                       | rbf         |
+| C                            | 1143.11...  |
+| gamma                        | 0.001136... |
 
 #### Stochastic Gradient Descent
+
+For the SGD classifier I perform a parameter search for each of the four different options of the learning_rate parameters, *optimal, constant, invscaling* and *adaptive*. I only document the tuned parameters of the best learning_rate option, in this case *optimal*. The following hyper-parameters are tuned:
+
+```python
+param_distributions = {
+    'penalty': ['l2', 'l1'],
+    'alpha': stats.uniform(10**(-6), 50),
+}
+```
+The results of the Randomized Search is shown in the table below:
+
+| Parameters of SGD classifier | Value      |
+| ---------------------------- | ---------- |
+| penalty                      | *l2*       |
+| alpha                        | 6.75588... |
+| learning_rate                | *optimal*  |
+
+#### Comparison of models
+
+In order to compare the performance of the SGD and SVC model I plot the precision vs recall curve for each classifier. In addition I add the untuned curves as well to see how parameter tuning changed the performance of the models. The precision vs recall curves for the tuned and untuned models can be seen in the image below.
+
+![](./images/precision_vs_recall_on_train_set.png)
+
+For the SGD model we can observe a great improvement for the tuned model (green vs yellow). For the SVM classifier (red vs blue) the improvement is not so significant. Overall, the SVC classifier seems to work slightly better on the training set as the tuned SGD model. In the next section, we'll see how the models perform on the test set.
+
+## 4. Validate and evaluate
+
+
+
+
+
+## 5. Conclusion
+
+Importance of size of test set.
+
+
+
+   
+
+
 
  

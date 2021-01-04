@@ -279,7 +279,7 @@ plt.clf()
 y_scores = cross_val_predict(SVC_lin, X_train_44[:,RFECV_.support_], y_train, cv=6, method='decision_function')
 print roc_auc_score(y_train, y_scores), "ROC AUC for best SVC features"
 precision, recall, proba = precision_recall_curve(y_train, y_scores)
-helper.plt_precision_vs_recall(precision, recall, title='SVC RFECV best features (untuned)', label='untuned_SVC', color='blue', linestyle='--')
+helper.plt_precision_vs_recall(precision, recall, title='SVC RFECV best features (untuned)', label='untuned_SVC', color='blue', linestyle='--', linewidth=5.)
 
 # Create feature set for SVC model
 X_train_44_SVC = RFECV_.transform(X_train_44)
@@ -294,10 +294,10 @@ SVC_clf = svm.SVC()
 # Random search to find best set of features
 param_distributions = {
             'kernel': ['linear', 'rbf'],
-            'C': stats.halfnorm(0.1, 10000),
+            'C': stats.uniform(1, 250000.),
             'gamma': stats.expon(scale=1.0),
         }
-SVC_RandSearch = RandomizedSearchCV(SVC_clf, param_distributions, cv=6, n_iter=5000, scoring='roc_auc', iid=False, verbose=1, n_jobs=8, random_state=77)
+SVC_RandSearch = RandomizedSearchCV(SVC_clf, param_distributions, cv=6, n_iter=5000, scoring='roc_auc', iid=False, verbose=1, n_jobs=4, random_state=77)
 print
 print "Randomizes Search for best hyperparameters for the SVC model"
 SVC_RandSearch.fit(X_train_44_SVC, y_train)
@@ -307,17 +307,26 @@ print
 print "Best parameters for SVC model:"
 print SVC_RandSearch.best_params_
 
+
 y_scores = cross_val_predict(SVC_clf, X_train_44_SVC, y_train, cv=6, method='decision_function')
 print roc_auc_score(y_train, y_scores), "ROC AUC curve for tuned SVM classifier"
 precision, recall, proba = precision_recall_curve(y_train, y_scores)
-helper.plt_precision_vs_recall(precision, recall, title='ROC AUC curve for tuned SVM classifier', label='tuned_SVC', color='red', alpha=0.6)
+helper.plt_precision_vs_recall(precision, recall, title='ROC AUC curve for tuned SVM classifier', label='tuned_SVC', color='red', alpha=0.6, linewidth=5.)
+
+# Reduce overfitting
+SVC_clf.set_params(C=10.)
+SVC_clf.set_params(gamma=0.055)
+
+y_scores = cross_val_predict(SVC_clf, X_train_44_SVC, y_train, cv=6, method='decision_function')
+print roc_auc_score(y_train, y_scores), "ROC AUC curve for tuned SVM classifier (C=10.)"
+precision, recall, proba = precision_recall_curve(y_train, y_scores)
+helper.plt_precision_vs_recall(precision, recall, title='ROC AUC curve for tuned SVM classifier', label='tuned_SVC (C=10.)', color='orange', alpha=0.6, linewidth=9.)
 
 # print SVC feature scores
 score_table = pd.DataFrame(zip(X_train_44_df.columns.to_list(), RFECV_.ranking_))
 print "RFECV ranking of features for SVC model"
 print score_table.sort_values(1, ascending=True)
 print
-
 
 
 # 2. Try: Stochastic Gradient Descent classifier
@@ -333,7 +342,7 @@ print "Randomizes Search for best hyperparameters for the SGD models"
 
 Results = {}
 learning_rate = ['optimal', 'constant', 'invscaling', 'adaptive'] 
-learning_rate = ['optimal']   # delete this line to run parameter search for all different learning_rate options
+# learning_rate = ['optimal']   # delete this line to run parameter search for all different learning_rate options
 
 for lr in learning_rate:
     if lr == 'optimal':
@@ -414,13 +423,13 @@ print
 y_scores = cross_val_predict(SGDClassifier(random_state=77, loss='hinge', learning_rate='optimal'), X_train_44_SGD, y_train, cv=6, method='decision_function')
 print roc_auc_score(y_train, y_scores), "ROC AUC curve for untuned SGD classifier"
 precision, recall, proba = precision_recall_curve(y_train, y_scores)
-helper.plt_precision_vs_recall(precision, recall, title='ROC AUC curve for untuned SGD classifier', label='untuned_SGD (optimal)', color='yellow', linestyle='--')
+helper.plt_precision_vs_recall(precision, recall, title='ROC AUC curve for untuned SGD classifier', label='untuned_SGD (optimal)', color='yellow', linestyle='--', linewidth=5.)
 
 # Plot tuned SGD precision vs recall curve
 y_scores = cross_val_predict(SGD_clf, X_train_44_SGD, y_train, cv=6, method='decision_function')
 print roc_auc_score(y_train, y_scores), "ROC AUC curve for tuned SGD classifier"
 precision, recall, proba = precision_recall_curve(y_train, y_scores)
-helper.plt_precision_vs_recall(precision, recall, title='Comparison of precision vs recall curves for SVC and SGD classifiers on train sets', label='tuned_SGD (optimal)', save=IMAGES+"precision_vs_recall_on_train_set.png", color='green', alpha=0.6)
+helper.plt_precision_vs_recall(precision, recall, title='Comparison of precision vs recall curves for SVC and SGD classifiers on train sets', label='tuned_SGD (optimal)', save=IMAGES+"precision_vs_recall_on_train_set.png", color='green', alpha=0.6, linewidth=5.)
 
 
 ######################
@@ -444,7 +453,7 @@ plt.clf()
 y_scores = SVC_clf.decision_function(X_test_44_SVC)
 print roc_auc_score(y_test, y_scores), "ROC AUC for SVM classifier."
 precision, recall, proba = precision_recall_curve(y_test, y_scores)
-helper.plt_precision_vs_recall(precision, recall, label='SVM classifier', color='red')
+helper.plt_precision_vs_recall(precision, recall, label='SVM classifier', color='red', linewidth=4.)
 y_predict = SVC_clf.predict(X_test_44_SVC)
 print
 print "Confusion matrix:"
@@ -458,7 +467,7 @@ print "SGD scores on test set:"
 y_scores = SGD_clf.decision_function(X_test_44_SGD)
 print roc_auc_score(y_test, y_scores), "ROC AUC for SGD classifier."
 precision, recall, proba = precision_recall_curve(y_test, y_scores)
-helper.plt_precision_vs_recall(precision, recall, label='SGD classifier', color='green', save=IMAGES+'precision_vs_recall_on_test_set.png', title='Comparison of precision vs recall curves for SVC and SGD classifiers on test set')
+helper.plt_precision_vs_recall(precision, recall, label='SGD classifier', color='green', save=IMAGES+'precision_vs_recall_on_test_set.png', title='Comparison of precision vs recall curves for SVC and SGD classifiers on test set', linewidth=4.)
 y_predict = SGD_clf.predict(X_test_44_SGD)
 print
 print "Confusion matrix:"

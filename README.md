@@ -138,40 +138,42 @@ The final AI model is a Support Vector Classifier. Support Vector Machines are s
 
 #### Selection of features
 
-For feature selection I use cross validated recursive feature elimination (RFECV) method. An estimator is required to run RFECV method, so we will come up with different sets of features for each investigated classifier. RFECV provides feature rankings. All selected features will have rank 1. The remaining features are numbered in accordance to their importance. The results of feature ranking for a Support Vector classifier (SVC) and a Stochastic Gradient Descent classifier (SGD) are shown in the table below.  
+Before we start investigating what features work best I split the data into a training and test set. The dataset is quite small and we only have 18 instances labeled as POI. Generally I would chose a test set size of about 20% to 30% of the whole data. In our case we would end up with less than 6 POIs in the test set. As I want to use the test set to validate the performance of our classifiers I decided to create a much bigger test set of 50%, knowing that this could compromise the quality/ accuracy of our models to be trained.  
+
+For feature selection I use cross validated recursive feature elimination (RFECV) method. An estimator is required to run RFECV method, so we will come up with different sets of features for each investigated classifier. RFECV provides feature rankings. All selected features have rank 1. The remaining features are numbered in accordance to their importance. The results of feature ranking for a Support Vector classifier (SVC) and a Stochastic Gradient Descent classifier (SGD) are shown in the table below.  
 
 ***Ranking of features by RFECV method***
 
-| Feature                                   | SVC rank | SGD rank |
-| ----------------------------------------- | :------: | -------- |
-| expenses                                  |    1     | 1        |
-| total_stock_value                         |    1     | 1        |
-| exercised_stock_options                   |    1     | 1        |
-| toPOI_rate                                |    1     | 1        |
-| bonus                                     |    1     | 7        |
-| exer_stock_options_deferral_payments_rate |    1     | 1        |
-| rest_stock_deferral_payments_rate         |    1     | 3        |
-| bonus_deferral_payments_rate              |    1     | 1        |
-| deferred_income                           |    1     | 1        |
-| shared_receipt_with_poi                   |    1     | 1        |
-| salary                                    |    2     | 1        |
-| exer_stock_options_total_payments_rate    |    3     | 8        |
-| other                                     |    4     | 1        |
-| deferral_payments                         |    5     | 10       |
-| long_term_incentive_total_payments_rate   |    6     | 11       |
-| restricted_stock_deferred                 |    7     | 9        |
-| long_term_incentive                       |    8     | 1        |
-| bonus_total_payments_rate                 |    9     | 1        |
-| from_this_person_to_poi                   |    10    | 5        |
-| total_payments                            |    11    | 13       |
-| restricted_stock                          |    12    | 6        |
-| from_poi_to_this_person                   |    13    | 12       |
-| fromPOI_rate                              |    14    | 2        |
-| director_fees                             |    15    | 4        |
+| Feature                                     | SVC rank | SGD rank |
+| ------------------------------------------- | :------: | -------- |
+| **salary**                                  |    1     | 7        |
+| **bonus**                                   |    1     | 1        |
+| **long_term_incentive**                     |    14    | 1        |
+| **deferred_income**                         |    1     | 1        |
+| **deferral_payments**                       |    13    | 1        |
+| **other**                                   |    1     | 1        |
+| **expenses**                                |    1     | 1        |
+| **director_fees**                           |    15    | 1        |
+| **total_payments**                          |    1     | 1        |
+| **exercised_stock_options**                 |    8     | 1        |
+| **restricted_stock**                        |    10    | 1        |
+| **restricted_stock_deferred**               |    5     | 1        |
+| **total_stock_value**                       |    12    | 1        |
+| **from_this_person_to_poi**                 |    1     | 2        |
+| from_poi_to_this_person                     |    2     | 6        |
+| **shared_receipt_with_poi**                 |    3     | 1        |
+| bonus_deferral_payments_rate                |    11    | 4        |
+| rest_stock_deferral_payments_rate           |    7     | 5        |
+| exer_stock_options_deferral_payments_rate   |    9     | 3        |
+| **long_term_incentive_total_payments_rate** |    1     | 5        |
+| **bonus_total_payments_rate**               |    4     | 1        |
+| **exer_stock_options_total_payments_rate**  |    6     | 1        |
+| **toPOI_rate**                              |    1     | 1        |
+| **fromPOI_rate**                            |    1     | 1        |
+|                                             |          |          |
+| **Total selected features**                 |    10    | 17       |
 
-For the SVM classifier the selected features are *expenses, total_stock_value, exercised_stock_options, toPOI_rate, bonus, exer_stock_options_deferral_payments_rate, rest_stock_deferral_payments_rate, bonus_deferral_payments_rate, deferred_income* and *shared_receipt_with_poi*. It is interesting that 4 out of the 10 features are newly created features.
-
-For the SGD model we have a different set of features as can be seen above. But again, 4 out of 12 features are newly created ones. 
+Bold marked features in the table above are selected for one or both classifiers. SGD and SVM classifiers have 7 features in common. For the SVM classifier 10 features are selected. 17 features are selected for the SGD classifier. 3 out of the 10 SVC features are newly created features. For the SGD classifier 4 new features are selected.
 
 
 
@@ -188,18 +190,18 @@ The following parameters are tuned:
 ```python
 `param_distributions = {`
             `'kernel': ['linear', 'rbf'],`
-            `'C': stats.uniform(0.1, 10000),`
+            `'C': stats.uniform(0.1, 250000),`
             `'gamma': stats.expon(scale=1.0),`
         }`
 ```
 
-I try a linear and *RBF* kernel. The regulation parameter C is randomly chosen between 0.1 and 10000. The last parameter is gamma for witch I use a exponential distribution function. The best parameters for the SVC model are: 
+I try a linear and *RBF* kernel. The regulation parameter C is randomly chosen between 0.1 and 250000. The last parameter is gamma for witch I use a exponential distribution function. The best parameters for the SVC model found by Randomized Search algorithm is shown in table below: 
 
 | Parameters of SVM classifier | Value       |
 | ---------------------------- | ----------- |
 | kernel                       | rbf         |
-| C                            | 1143.11...  |
-| gamma                        | 0.001136... |
+| C                            | 156880....  |
+| gamma                        | 0.045335... |
 
 #### Stochastic Gradient Descent
 
@@ -216,7 +218,7 @@ The results of the Randomized Search is shown in the table below:
 | Parameters of SGD classifier | Value      |
 | ---------------------------- | ---------- |
 | penalty                      | *l2*       |
-| alpha                        | 6.75588... |
+| alpha                        | 0.00985... |
 | learning_rate                | *optimal*  |
 
 #### Comparison of models
@@ -225,11 +227,65 @@ In order to compare the performance of the SGD and SVC model I plot the precisio
 
 ![](./images/precision_vs_recall_on_train_set.png)
 
-For the SGD model we can observe a great improvement for the tuned model (green vs yellow). For the SVM classifier (red vs blue) the improvement is not so significant. Overall, the SVC classifier seems to work slightly better on the training set as the tuned SGD model. In the next section, we'll see how the models perform on the test set.
+For the SGD model we can observe an improvement for the tuned model (green vs yellow). For the SVM classifier (red vs blue) the improvement is tremendously, leading to a ROC AUC (Area Under Curve) score of 99.6%. I manually decreased the C parameter to C=10.0 and the gamma parameter I slightly increased to gamma = 0.055. The resulting precision vs recall curve is given in the image above (orange curve). The ROC AUC is still 98.7%. Overall, the SVC classifier seems to work slightly better on the training set as the tuned SGD model. In the next section, we'll see how the models perform on the test set.
+
+
 
 ## 4. Validate and evaluate
 
+In this chapter we will validate our classifier against the test set, address the precision vs recall trade-off and perform a validation using the *tester.py* script.
 
+Validation of a model means evaluating the performance of the model on instances the model hasn't seen yet. In other words, these new instances weren't part of the training set. By evaluating the model on the test set we can estimate how our model will perform in real life. This process will also reveal if our algorithm generalizes well (makes good predictions on the test set) or if it's over-fitting the training data. In case of over-fitting the model performs extremely well on the training data but is much worse on the test data. We've already seen a case of over-fitting on the training set in the image above, where the tuned SVM classifier performs extremely well on training set resulting in a ROC AUC of more than 99%. The validation of this model I don't show but it's much worse than the one I manually adopted.
+
+To compare the performance between the SVC and SGD model I evaluate the decision function results of each model and create precision vs recall curves. These curves illustrate very well how our algorithm performs. The more the curves are located in the top and right of the diagram the better the performance.   Precision is the ratio between all True Positive (TP) predictions divided by the sum of True Positives and False Positives (FP). 
+$$
+precision = \frac{TP}{TP+FP}
+$$
+Recall, or True Positive Rate (TPR), is the ratio between True Positives and the sum of True Positives and False Negatives (FN) as shown in the formula below.
+$$
+recall = \frac{TP}{TP+FN}
+$$
+Our task is to find possible Persons of Interest (POIs) from our data set. I'd like to identify as many POIs as possible what means we need to get high recall values. The drawback of high recall values is the drop in precision as can be seen very nicely in the image above. A recall of 1 for the SGD classifier (green curve) would result in a precision value of about 0.36. On the other hand a precision of 1 would result in a low recall of about 0.34. In the image below we can see the precision vs recall curves for the tuned algorithms on the test set.
+
+![](.\images\precision_vs_recall_on_test_set.png)
+
+From the image above we can see that the SGD classifier performs better than the SVC classifier. Compared to the Precision/ Recall curves from the training set the SGD classifier performs slightly worse on the test data. The SVC model on the other hand is performing much worse on the test data than on the training set which means it's still over-fitting. The table below shows the confusion matrix in the form 
+$$
+\begin{bmatrix}  TN & FP \\  FN & TP \\ \end{bmatrix}
+$$
+and the actual recall and precision values for the test set for our two classifiers.
+
+| Metric           | SVM classifier                                        | SGD classifier                                       |
+| ---------------- | ----------------------------------------------------- | ---------------------------------------------------- |
+| Confusion Matrix | $\begin{bmatrix}  51 & 12 \\  5 & 4 \\ \end{bmatrix}$ | $\begin{bmatrix}  58 & 5 \\  4 & 5 \\ \end{bmatrix}$ |
+| Recall           | 0.44                                                  | 0.56                                                 |
+| Precision        | 0.25                                                  | 0.50                                                 |
+
+I'm not so much content with the actual predictions as this result does not reflect our goal to find as many POIs as possible. In order to address this issue I coded as class called *flex_classifier* which can be used to optimize recall and precision output. I want to have a precision value >= 0.35 and a recall value of  >= 0.40 and the classifier shall optimize recall (as high as possible at given min. requirements).
+
+```python
+# Flex classifier for SGD model optimizing recall
+flex_SGD_clf = helper.flex_classifier(SGD_clf, min_precision=0.35, min_recall=0.4, maximize='recall')
+flex_SGD_clf.fit(X_train_44_SGD, y_train)
+```
+
+I use cross validation of the training set to find the best threshold to achieve this goal. The results of the flex_classifier for the SGD and SVC model are given in the table below.
+
+| Metric           | flex_SVM classifier                                   | flex_SGD classifier                                  |
+| ---------------- | ----------------------------------------------------- | ---------------------------------------------------- |
+| Confusion Matrix | $\begin{bmatrix}  50 & 13 \\  2 & 7 \\ \end{bmatrix}$ | $\begin{bmatrix}  54 & 9 \\  2 & 7 \\ \end{bmatrix}$ |
+| Recall           | 0.78                                                  | 0.78                                                 |
+| Precision        | 0.35                                                  | 0.44                                                 |
+
+Well, this looks quite promising. I would chose the SGD classifier if had to put the classifier in operation. It seems to be more robust regarding generalization and also shows better results on the test set. Let's see how the models perform using the *test_classifier* function of *tester.py*. I provide the results of *test_classifier* in the same way as done in the previous two tables.
+
+| Metric           | flex_SVM classifier                                          | flex_SGD classifier                                          |
+| ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Confusion Matrix | $\begin{bmatrix}  10613 & 2387 \\   685 & 1315 \\ \end{bmatrix}$ | $\begin{bmatrix}  11290 & 1710 \\  599 & 1401 \\ \end{bmatrix}$ |
+| Recall           | 0.66                                                         | 0.70                                                         |
+| Precision        | 0.36                                                         | 0.45                                                         |
+
+The validation using *test_classifier* function works quite well and the results are comparable to the performance on the test set. I actually expected the test set performance being worse than *test_classifier* as this validation uses not only the test data but also instances we've used to train the models. Further results are discussed in the next chapter  
 
 
 
@@ -240,6 +296,10 @@ Importance of size of test set.
 
 
    
+
+
+
+receiver operating characteristic (ROC) 
 
 
 

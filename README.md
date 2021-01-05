@@ -225,7 +225,7 @@ The results of the Randomized Search is shown in the table below:
 
 In order to compare the performance of the SGD and SVC model I plot the precision vs recall curve for each classifier. In addition I add the untuned curves as well to see how parameter tuning changed the performance of the models. The precision vs recall curves for the tuned and untuned models can be seen in the image below.
 
-![](./images/precision_vs_recall_on_train_set.png)
+![](./images/precision_vs_recall_on_train_set_640.png)
 
 For the SGD model we can observe an improvement for the tuned model (green vs yellow). For the SVM classifier (red vs blue) the improvement is tremendously, leading to a ROC AUC (Area Under Curve) score of 99.6%. The model seems to over-fit the training data (what can be seen later during validation). 
 
@@ -243,34 +243,28 @@ Validation of a model means evaluating the performance of the model on instances
 
 To compare the performance between the SVC and SGD model I evaluate the decision function results of each model and create precision vs recall curves. These curves illustrate very well how our algorithm performs. The more the curves are located in the top and right of the diagram the better the performance.   Precision is the ratio between all True Positive (TP) predictions divided by the sum of True Positives and False Positives (FP).
 
-\begin{equation}
-precision = \frac{TP}{TP+FP}
-\end{equation}
+<img src="./images/precision.png">
 
 Recall, or True Positive Rate (TPR), is the ratio between True Positives and the sum of True Positives and False Negatives (FN) as shown in the formula below.
 
-\begin{equation}
-recall = \frac{TP}{TP+FN}
-\end{equation}
+<img src="./images/recall.png">
 
 Our task is to find possible Persons of Interest (POIs) from our data set. I'd like to identify as many POIs as possible what means we need to get high recall values. The drawback of high recall values is the drop in precision as can be seen very nicely in the image above. A recall of 1 for the SGD classifier (green curve) would result in a precision value of about 0.36. On the other hand a precision of 1 would result in a low recall of about 0.34. In the image below we can see the precision vs recall curves for the tuned algorithms on the test set.
 
 
-![](.\images\precision_vs_recall_on_test_set.png)
+![](.\images\precision_vs_recall_on_test_set_640.png)
 
-From the image above we can see that the SGD classifier performs better on the test set than the SVM classifiers. Compared to the Precision/ Recall curves from the training set the SGD classifier performs slightly worse on the test data. The SVC models on the other hand are performing much worse on the test data than on the training set which means the models are still over-fitting. The reduction of hyper-parameter C doesn't seem to change much. Using more features reduces over-fitting, but the SGD model still performs better on the test set. The table below shows the confusion matrix in the form 
+From the image above we can see that the SGD classifier performs better on the test set than the SVM classifiers. Compared to the Precision/ Recall curves from the training set the SGD classifier performs slightly worse on the test data. The SVC models on the other hand are performing much worse on the test data than on the training set which means the models are still over-fitting. The reduction of hyper-parameter C doesn't seem to change much. Using more features reduces over-fitting, but the SGD model still performs better on the test set. The table below shows the confusion matrix in the form <img src="./images/confusionMatrix_def_80.png">
 
-\begin{bmatrix}  TN & FP \\  FN & TP \\ \end{bmatrix}
-
-and the actual recall and precision values for the test set for our two classifiers.
+and the actual recall and precision values for the test set for our classifiers.
 
 ***Performance of classifiers on test set***
 
-| Metric           | SVM clf (initial, C=10.)                              | SVM clf (14 features)                                 | SGD clf                                              |
-| ---------------- | ----------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------- |
-| Confusion Matrix | $\begin{bmatrix}  51 & 12 \\  5 & 4 \\ \end{bmatrix}$ | $\begin{bmatrix}  53 & 10 \\  2 & 7 \\ \end{bmatrix}$ | $\begin{bmatrix}  58 & 5 \\  4 & 5 \\ \end{bmatrix}$ |
-| Recall           | 0.44                                                  | 0.78                                                  | 0.56                                                 |
-| Precision        | 0.25                                                  | 0.41                                                  | 0.50                                                 |
+| Metric           | SVM clf (initial, C=10.)             | SVM clf (14 features)                | SGD clf                            |
+| ---------------- | ------------------------------------ | ------------------------------------ | ---------------------------------- |
+| Confusion Matrix | <img src="./images/cm_svc_c_01.png"> | <img src="./images/cm_svc_f_01.png"> | <img src="./images/cm_sgd_01.png"> |
+| Recall           | 0.44                                 | 0.78                                 | 0.56                               |
+| Precision        | 0.25                                 | 0.41                                 | 0.50                               |
 
 The SVC with 14 features shows already promising results, but the actual predictions of the SGD classifier does not reflect our goal to find as many POIs as possible. In order to address this issue I coded as class called *flex_classifier* which can be used to optimize recall and precision output. I want to have a precision value >= 0.35 and a recall value of  >= 0.40 and the classifier shall optimize recall (as high as possible at given min. requirements). A code example of the SGD classifier is shown below.
 
@@ -284,21 +278,21 @@ I use cross validation of the training set to find the best threshold to achieve
 
 ***Performance of flex classifiers on test set***
 
-| Metric           | flex_SVM clf (C=10.)                                  | flex_SVM clf (14 features)                            | flex_SGD clf                                         |
-| ---------------- | ----------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------- |
-| Confusion Matrix | $\begin{bmatrix}  50 & 13 \\  2 & 7 \\ \end{bmatrix}$ | $\begin{bmatrix}  53 & 10 \\  2 & 7 \\ \end{bmatrix}$ | $\begin{bmatrix}  54 & 9 \\  2 & 7 \\ \end{bmatrix}$ |
-| Recall           | 0.78                                                  | 0.78                                                  | 0.78                                                 |
-| Precision        | 0.35                                                  | 0.37                                                  | 0.44                                                 |
+| Metric           | flex_SVM clf (C=10.)                 | flex_SVM clf (14 features)           | flex_SGD clf                       |
+| ---------------- | ------------------------------------ | ------------------------------------ | ---------------------------------- |
+| Confusion Matrix | <img src="./images/cm_svc_c_02.png"> | <img src="./images/cm_svc_f_02.png"> | <img src="./images/cm_sgd_02.png"> |
+| Recall           | 0.78                                 | 0.78                                 | 0.78                               |
+| Precision        | 0.35                                 | 0.37                                 | 0.44                               |
 
 Well, this looks quite promising. I would chose the SGD classifier if had to put a classifier in operation. It seems to be more robust regarding generalization and also shows better results on the test set. Let's see how the models perform using the *test_classifier* function of *tester.py*. I provide the results of *test_classifier* in the same way as done in the previous two tables.
 
 ***Results of test_classifier function***
 
-| Metric           | flex_SVM clf (C=10.)                                         | flex_SVM clf (14 features)                                   | flex_SGD clf                                                 |
-| ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| Confusion Matrix | $\begin{bmatrix}  10613 & 2387 \\   685 & 1315 \\ \end{bmatrix}$ | $\begin{bmatrix}  10659 & 2341\\   818 & 1182\\ \end{bmatrix}$ | $\begin{bmatrix}  11290 & 1710 \\  599 & 1401 \\ \end{bmatrix}$ |
-| Recall           | 0.66                                                         | 0.59                                                         | 0.70                                                         |
-| Precision        | 0.36                                                         | 0.34                                                         | 0.45                                                         |
+| Metric           | flex_SVM clf (C=10.)                 | flex_SVM clf (14 features)           | flex_SGD clf                       |
+| ---------------- | ------------------------------------ | ------------------------------------ | ---------------------------------- |
+| Confusion Matrix | <img src="./images/cm_svc_c_03.png"> | <img src="./images/cm_svc_f_03.png"> | <img src="./images/cm_sGD_03.png"> |
+| Recall           | 0.66                                 | 0.59                                 | 0.70                               |
+| Precision        | 0.36                                 | 0.34                                 | 0.45                               |
 
 The validation using *test_classifier* function works quite well and the results are comparable to the performance on the test set. I actually expected the test set performance being worse than *test_classifier* as this validation uses not only the test data but also instances we've used to train the models. The SVC model with 14 features performs slightly worse than the manually tweaked SVC (C=10.). The performance of the SGD classifier shows the best results. 
 

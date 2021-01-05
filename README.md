@@ -241,22 +241,27 @@ In this chapter we will validate our classifiers against the test set, address t
 
 Validation of a model means evaluating the performance of the model on instances the model hasn't seen yet. In other words, these new instances weren't part of the training set. By evaluating the model on the test set we can estimate how our model will perform in real life. This process will also reveal if our algorithm generalizes well (makes good predictions on unknown instances) or if it's over-fitting the training data. In case of over-fitting the model performs extremely well on the training data but is much worse on the test data. We've already seen a case of over-fitting on the training set in the image above, where the tuned SVM classifier performs extremely well on training set resulting in a ROC AUC of more than 99%. 
 
-To compare the performance between the SVC and SGD model I evaluate the decision function results of each model and create precision vs recall curves. These curves illustrate very well how our algorithm performs. The more the curves are located in the top and right of the diagram the better the performance.   Precision is the ratio between all True Positive (TP) predictions divided by the sum of True Positives and False Positives (FP). 
-$$
+To compare the performance between the SVC and SGD model I evaluate the decision function results of each model and create precision vs recall curves. These curves illustrate very well how our algorithm performs. The more the curves are located in the top and right of the diagram the better the performance.   Precision is the ratio between all True Positive (TP) predictions divided by the sum of True Positives and False Positives (FP).
+
+\begin{equation}
 precision = \frac{TP}{TP+FP}
-$$
+\end{equation}
+
 Recall, or True Positive Rate (TPR), is the ratio between True Positives and the sum of True Positives and False Negatives (FN) as shown in the formula below.
-$$
+
+\begin{equation}
 recall = \frac{TP}{TP+FN}
-$$
+\end{equation}
+
 Our task is to find possible Persons of Interest (POIs) from our data set. I'd like to identify as many POIs as possible what means we need to get high recall values. The drawback of high recall values is the drop in precision as can be seen very nicely in the image above. A recall of 1 for the SGD classifier (green curve) would result in a precision value of about 0.36. On the other hand a precision of 1 would result in a low recall of about 0.34. In the image below we can see the precision vs recall curves for the tuned algorithms on the test set.
+
 
 ![](.\images\precision_vs_recall_on_test_set.png)
 
 From the image above we can see that the SGD classifier performs better on the test set than the SVM classifiers. Compared to the Precision/ Recall curves from the training set the SGD classifier performs slightly worse on the test data. The SVC models on the other hand are performing much worse on the test data than on the training set which means the models are still over-fitting. The reduction of hyper-parameter C doesn't seem to change much. Using more features reduces over-fitting, but the SGD model still performs better on the test set. The table below shows the confusion matrix in the form 
-$$
+
 \begin{bmatrix}  TN & FP \\  FN & TP \\ \end{bmatrix}
-$$
+
 and the actual recall and precision values for the test set for our two classifiers.
 
 ***Performance of classifiers on test set***

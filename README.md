@@ -252,7 +252,7 @@ Recall, or True Positive Rate (TPR), is the ratio between True Positives and the
 Our task is to find possible Persons of Interest (POIs) from our data set. I'd like to identify as many POIs as possible what means we need to get high recall values. The drawback of high recall values is the drop in precision as can be seen very nicely in the image above. A recall of 1 for the SGD classifier (green curve) would result in a precision value of about 0.36. On the other hand a precision of 1 would result in a low recall of about 0.34. In the image below we can see the precision vs recall curves for the tuned algorithms on the test set.
 
 
-![](.\images\precision_vs_recall_on_test_set_640.PNG)
+![precision_vs_recall_on_test_set](./images/precision_vs_recall_on_test_set_640.png)
 
 From the image above we can see that the SGD classifier performs better on the test set than the SVM classifiers. Compared to the Precision/ Recall curves from the training set the SGD classifier performs slightly worse on the test data. The SVC models on the other hand are performing much worse on the test data than on the training set which means the models are still over-fitting. The reduction of hyper-parameter C doesn't seem to change much. Using more features reduces over-fitting, but the SGD model still performs better on the test set. The table below shows the confusion matrix in the form <img src="./images/confusionMatrix_def_80.PNG">
 

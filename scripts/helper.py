@@ -69,6 +69,8 @@ def correlate(frame, corr, feature_list=None):
     'feature', 'divisor', 'pearson correlation', 'number of data points'
     '''
     correlations = []   # store correlation results
+    corr_with = pd.DataFrame(frame[corr])
+    
     if feature_list == None:
         feature_list = frame.columns
     for feature in feature_list:
@@ -76,16 +78,21 @@ def correlate(frame, corr, feature_list=None):
             if feature == divisor:
                 continue   # skip correlations with same column
             try:
+                # Create new  feature
                 new_feature = frame[feature].div( frame[divisor] )
             except ZeroDivisionError:
                 print "division is zero. Value skipped."
                 continue
             
             values = new_feature.count()
-            corr_poi = frame.corrwith(new_feature)[corr]
+            #corr_poi = frame.corrwith(new_feature)[corr]
+            # Correlate with 'corr'
+            corr_with['new'] = new_feature
+            corr_poi = corr_with.corr().iloc[0,1]
             
             if not np.isnan(corr_poi):
                 correlations.append( [feature, divisor, corr_poi, values] )
+    
     correlations.sort(key=lambda x: abs(x[2]), reverse=True)
     corr_frame = pd.DataFrame(correlations, columns=['numerator', 'denominator', 'corr', 'count_instances'])
     
@@ -161,6 +168,10 @@ def plt_precision_recall_vs_threshold(precision, recall, threshold, title=False)
     return None
 
 def plt_precision_vs_recall(precision, recall, title=False, save=False, **kwargs):
+    '''
+    Plot precision versus recall curves
+    precision, recall:   list of precision, recall values for each instance
+    '''
     plt.plot(recall, precision, "b-", **kwargs)
     plt.xlabel("Recall", fontsize=20)
     plt.ylabel("Precision", fontsize=20)
@@ -178,6 +189,9 @@ def plt_precision_vs_recall(precision, recall, title=False, save=False, **kwargs
 
 
 def plot_roc_curve(fpr, tpr, title=False):
+    '''
+    Plot roc curves for given false positive rates (fpr) and true positive rates (tpr)
+    '''
     plt.plot(fpr, tpr, linewidth=1)
     plt.plot([0, 1], [0, 1], 'g--') 
     plt.axis([0, 1, 0, 1])                                    
@@ -190,6 +204,7 @@ def plot_roc_curve(fpr, tpr, title=False):
 
 def check_Classifiers(X, y, classifiers, imputers=[], scalers=[], names=[], verbose=0, cv=5):
     '''
+    Not used
     '''
     check_df = np.array([])
     if len(names) != len(clf):
@@ -203,6 +218,9 @@ def check_Classifiers(X, y, classifiers, imputers=[], scalers=[], names=[], verb
 
 class flex_classifier(BaseEstimator):
     '''
+    Flex classifier is used to deal with the precision/ recall trade-off. 
+    This classifier optimizes the predictions of a given binary 'classifier' to specific requirements on precision and recall.
+    For given minimum values for recall and precision it tries to optimize either recall or precision (not yet implemented)   
     '''
     def __init__(self, classifier, min_precision=0.0, min_recall=0.0, maximize='recall', threshold=0.0):
         self.classifier = clone(classifier)
@@ -220,11 +238,17 @@ class flex_classifier(BaseEstimator):
             self.method = 'decision_function'
         
     def fit(self, X, y=None):
+        '''
+        Used the fit method of the base classifier to fit the model to given X, y.
+        '''
         self.classifier.fit(X, y)
         #self.threshold = self.det_threshold(X, y)
         return self
     
     def predict(self, X):
+        '''
+        Calls the decision function or prediction probability of the base classifier, adjusts the returned value by self.threshold and returns the prediction.
+        '''
         if self.method == 'decision_function':
             df_h = self.classifier.decision_function(X) - self.threshold
         else:

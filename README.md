@@ -2,7 +2,7 @@
 
 # ENRON fraud detection
 
-Identify persons of interest (POIs) from ENRON financial and email data (educational purpose) 
+Identify persons of interest (POI) from ENRON financial and email data (educational purpose) 
 
 
 
@@ -12,7 +12,7 @@ This project is about using machine learning (ML) to identify Persons of Interes
 
 #### The dataset
 
-The present dataset is taken from the [*Enron Email Dataset*]( https://www.cs.cmu.edu/~./enron/) and comprises financial and email data. There are 146 data points (employees and executives from Enron). 18 people are identified as POI and 128 as non-POI. There are 20 features in the dataset. 10 of them are payment features, 4 are stock features (14 financial features) and there are 6 email features. From the output below you can see that all features show missing data. *loan_advances* does only have only 4 *non-null* values and *director_fees*, *restricted_stock_deferred* only 17, respectively 18 *non-null* values. 
+The present dataset is taken from the [*Enron Email Dataset*](https://www.cs.cmu.edu/~./enron/) and comprises financial and email data. There are 146 data points (employees and executives from Enron). 18 people are identified as POI and 128 as non-POI. There are 20 features in the dataset. 10 of them are payment features, 4 are stock features (14 financial features) and there are 6 email features. From the output below you can see that all features show missing data. *loan_advances* does only have only 4 *non-null* values and *director_fees*, *restricted_stock_deferred* only 17, respectively 18 *non-null* values. 
 
 ```python
 data_Frame.info()
@@ -227,15 +227,19 @@ In order to compare the performance of the SGD and SVC model I plot the precisio
 
 ![](./images/precision_vs_recall_on_train_set.png)
 
-For the SGD model we can observe an improvement for the tuned model (green vs yellow). For the SVM classifier (red vs blue) the improvement is tremendously, leading to a ROC AUC (Area Under Curve) score of 99.6%. I manually decreased the C parameter to C=10.0 and the gamma parameter I slightly increased to gamma = 0.055. The resulting precision vs recall curve is given in the image above (orange curve). The ROC AUC is still 98.7%. Overall, the SVC classifier seems to work slightly better on the training set as the tuned SGD model. In the next section, we'll see how the models perform on the test set.
+For the SGD model we can observe an improvement for the tuned model (green vs yellow). For the SVM classifier (red vs blue) the improvement is tremendously, leading to a ROC AUC (Area Under Curve) score of 99.6%. The model seems to over-fit the training data (what can be seen later during validation). 
+
+I tried two approaches to overcome the over-fitting issue. First I manually decreased the C parameter to C=10.0 and the gamma parameter I slightly increased to gamma = 0.055. The resulting precision vs recall curve is given in the image above (orange curve). The ROC AUC is still 98.7% and I think the model is still over-fitting. Second I increased the minimum number of features to be selected by the RFECV algorithm to 14 features. The algorithm selects the following features: 'salary', 'bonus', 'deferred_income', 'other', 'expenses', 'total_payments', 'restricted_stock_deferred', 'from_this_person_to_poi', 'from_poi_to_this_person', 'shared_receipt_with_poi', 'long_term_incentive_total_payments_rate', 'bonus_total_payments_rate', 'toPOI_rate' and 'fromPOI_rate'. The initial  SVC model uses only 10 features. The tuned precision vs recall curve (black) for the SVC with 14 features can be seen in the image above. Although the tuned model with 14 features performs worse than the blue one (untuned SVC with 10 features) it looks much more natural to me. 
+
+Overall, the tuned SVC classifier seems to work slightly better on the training set than the tuned SGD model. In the next section, we'll see how the models perform on the test set.
 
 
 
 ## 4. Validate and evaluate
 
-In this chapter we will validate our classifier against the test set, address the precision vs recall trade-off and perform a validation using the *tester.py* script.
+In this chapter we will validate our classifiers against the test set, address the precision vs recall trade-off and perform a validation using the *tester.py* script.
 
-Validation of a model means evaluating the performance of the model on instances the model hasn't seen yet. In other words, these new instances weren't part of the training set. By evaluating the model on the test set we can estimate how our model will perform in real life. This process will also reveal if our algorithm generalizes well (makes good predictions on the test set) or if it's over-fitting the training data. In case of over-fitting the model performs extremely well on the training data but is much worse on the test data. We've already seen a case of over-fitting on the training set in the image above, where the tuned SVM classifier performs extremely well on training set resulting in a ROC AUC of more than 99%. The validation of this model I don't show but it's much worse than the one I manually adopted.
+Validation of a model means evaluating the performance of the model on instances the model hasn't seen yet. In other words, these new instances weren't part of the training set. By evaluating the model on the test set we can estimate how our model will perform in real life. This process will also reveal if our algorithm generalizes well (makes good predictions on unknown instances) or if it's over-fitting the training data. In case of over-fitting the model performs extremely well on the training data but is much worse on the test data. We've already seen a case of over-fitting on the training set in the image above, where the tuned SVM classifier performs extremely well on training set resulting in a ROC AUC of more than 99%. 
 
 To compare the performance between the SVC and SGD model I evaluate the decision function results of each model and create precision vs recall curves. These curves illustrate very well how our algorithm performs. The more the curves are located in the top and right of the diagram the better the performance.   Precision is the ratio between all True Positive (TP) predictions divided by the sum of True Positives and False Positives (FP). 
 $$
@@ -249,19 +253,21 @@ Our task is to find possible Persons of Interest (POIs) from our data set. I'd l
 
 ![](.\images\precision_vs_recall_on_test_set.png)
 
-From the image above we can see that the SGD classifier performs better than the SVC classifier. Compared to the Precision/ Recall curves from the training set the SGD classifier performs slightly worse on the test data. The SVC model on the other hand is performing much worse on the test data than on the training set which means it's still over-fitting. The table below shows the confusion matrix in the form 
+From the image above we can see that the SGD classifier performs better on the test set than the SVM classifiers. Compared to the Precision/ Recall curves from the training set the SGD classifier performs slightly worse on the test data. The SVC models on the other hand are performing much worse on the test data than on the training set which means the models are still over-fitting. The reduction of hyper-parameter C doesn't seem to change much. Using more features reduces over-fitting, but the SGD model still performs better on the test set. The table below shows the confusion matrix in the form 
 $$
 \begin{bmatrix}  TN & FP \\  FN & TP \\ \end{bmatrix}
 $$
 and the actual recall and precision values for the test set for our two classifiers.
 
-| Metric           | SVM classifier                                        | SGD classifier                                       |
-| ---------------- | ----------------------------------------------------- | ---------------------------------------------------- |
-| Confusion Matrix | $\begin{bmatrix}  51 & 12 \\  5 & 4 \\ \end{bmatrix}$ | $\begin{bmatrix}  58 & 5 \\  4 & 5 \\ \end{bmatrix}$ |
-| Recall           | 0.44                                                  | 0.56                                                 |
-| Precision        | 0.25                                                  | 0.50                                                 |
+***Performance of classifiers on test set***
 
-I'm not so much content with the actual predictions as this result does not reflect our goal to find as many POIs as possible. In order to address this issue I coded as class called *flex_classifier* which can be used to optimize recall and precision output. I want to have a precision value >= 0.35 and a recall value of  >= 0.40 and the classifier shall optimize recall (as high as possible at given min. requirements).
+| Metric           | SVM clf (initial, C=10.)                              | SVM clf (14 features)                                 | SGD clf                                              |
+| ---------------- | ----------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------- |
+| Confusion Matrix | $\begin{bmatrix}  51 & 12 \\  5 & 4 \\ \end{bmatrix}$ | $\begin{bmatrix}  53 & 10 \\  2 & 7 \\ \end{bmatrix}$ | $\begin{bmatrix}  58 & 5 \\  4 & 5 \\ \end{bmatrix}$ |
+| Recall           | 0.44                                                  | 0.78                                                  | 0.56                                                 |
+| Precision        | 0.25                                                  | 0.41                                                  | 0.50                                                 |
+
+The SVC with 14 features shows already promising results, but the actual predictions of the SGD classifier does not reflect our goal to find as many POIs as possible. In order to address this issue I coded as class called *flex_classifier* which can be used to optimize recall and precision output. I want to have a precision value >= 0.35 and a recall value of  >= 0.40 and the classifier shall optimize recall (as high as possible at given min. requirements). A code example of the SGD classifier is shown below.
 
 ```python
 # Flex classifier for SGD model optimizing recall
@@ -269,38 +275,41 @@ flex_SGD_clf = helper.flex_classifier(SGD_clf, min_precision=0.35, min_recall=0.
 flex_SGD_clf.fit(X_train_44_SGD, y_train)
 ```
 
-I use cross validation of the training set to find the best threshold to achieve this goal. The results of the flex_classifier for the SGD and SVC model are given in the table below.
+I use cross validation of the training set to find the best threshold to achieve better recall results. The results of the flex_classifier for the SGD and SVC model are given in the table below.
 
-| Metric           | flex_SVM classifier                                   | flex_SGD classifier                                  |
-| ---------------- | ----------------------------------------------------- | ---------------------------------------------------- |
-| Confusion Matrix | $\begin{bmatrix}  50 & 13 \\  2 & 7 \\ \end{bmatrix}$ | $\begin{bmatrix}  54 & 9 \\  2 & 7 \\ \end{bmatrix}$ |
-| Recall           | 0.78                                                  | 0.78                                                 |
-| Precision        | 0.35                                                  | 0.44                                                 |
+***Performance of flex classifiers on test set***
 
-Well, this looks quite promising. I would chose the SGD classifier if had to put the classifier in operation. It seems to be more robust regarding generalization and also shows better results on the test set. Let's see how the models perform using the *test_classifier* function of *tester.py*. I provide the results of *test_classifier* in the same way as done in the previous two tables.
+| Metric           | flex_SVM clf (C=10.)                                  | flex_SVM clf (14 features)                            | flex_SGD clf                                         |
+| ---------------- | ----------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------- |
+| Confusion Matrix | $\begin{bmatrix}  50 & 13 \\  2 & 7 \\ \end{bmatrix}$ | $\begin{bmatrix}  53 & 10 \\  2 & 7 \\ \end{bmatrix}$ | $\begin{bmatrix}  54 & 9 \\  2 & 7 \\ \end{bmatrix}$ |
+| Recall           | 0.78                                                  | 0.78                                                  | 0.78                                                 |
+| Precision        | 0.35                                                  | 0.37                                                  | 0.44                                                 |
 
-| Metric           | flex_SVM classifier                                          | flex_SGD classifier                                          |
-| ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| Confusion Matrix | $\begin{bmatrix}  10613 & 2387 \\   685 & 1315 \\ \end{bmatrix}$ | $\begin{bmatrix}  11290 & 1710 \\  599 & 1401 \\ \end{bmatrix}$ |
-| Recall           | 0.66                                                         | 0.70                                                         |
-| Precision        | 0.36                                                         | 0.45                                                         |
+Well, this looks quite promising. I would chose the SGD classifier if had to put a classifier in operation. It seems to be more robust regarding generalization and also shows better results on the test set. Let's see how the models perform using the *test_classifier* function of *tester.py*. I provide the results of *test_classifier* in the same way as done in the previous two tables.
 
-The validation using *test_classifier* function works quite well and the results are comparable to the performance on the test set. I actually expected the test set performance being worse than *test_classifier* as this validation uses not only the test data but also instances we've used to train the models. Further results are discussed in the next chapter  
+***Results of test_classifier function***
 
+| Metric           | flex_SVM clf (C=10.)                                         | flex_SVM clf (14 features)                                   | flex_SGD clf                                                 |
+| ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Confusion Matrix | $\begin{bmatrix}  10613 & 2387 \\   685 & 1315 \\ \end{bmatrix}$ | $\begin{bmatrix}  10659 & 2341\\   818 & 1182\\ \end{bmatrix}$ | $\begin{bmatrix}  11290 & 1710 \\  599 & 1401 \\ \end{bmatrix}$ |
+| Recall           | 0.66                                                         | 0.59                                                         | 0.70                                                         |
+| Precision        | 0.36                                                         | 0.34                                                         | 0.45                                                         |
 
-
-## 5. Conclusion
-
-Importance of size of test set.
+The validation using *test_classifier* function works quite well and the results are comparable to the performance on the test set. I actually expected the test set performance being worse than *test_classifier* as this validation uses not only the test data but also instances we've used to train the models. The SVC model with 14 features performs slightly worse than the manually tweaked SVC (C=10.). The performance of the SGD classifier shows the best results. 
 
 
 
-   
+## 5. Summary
+
+This project was about finding Persons of Interest (POIs) involved in the Enron scandal using machine learning. Present dataset comprises 146 instances and 20 features each. Only 18 instances are labeled as POI. After cleaning the dataset and building new features, we've investigated two algorithms, a Support Vector Classifier (SVC) and a Stochastic Gradient Descent (SGD) classifier. Different features were selected for each classifier using cross-validated recursive feature elimination (RFECV). Trained SVC model showed over-fitting to the training set which I tried to address by reducing the hyper-parameter C manually and selecting more features. A third alternative could have been to feed the model with more data. Unfortunately, there are not many instances available in the dataset and reducing the test set could compromise our validation results. Validation on the test set proves over-fitting of the SVC model. The means to use more features showed good results and improved performance on the test set. The SGD classifier performed best on the test set and is the chosen model for this project. The performance is measured by Recall and Precision metrics. A new class *flex_classifier* was coded and used to address the precision/ recall trade-off in order to optimize the predictions/ recall (find as many POIs as possible). On the test set the model achieved a recall value of 0.78 and a precision of 0.44. Using *tester.ps* for validation results in a recall value of 0.70 and a precision of 0.45. 
+
+The following scripts and files and folders are used to prepare the content of this report:
+
+- *poi_id.py*:       Reflects whole process of project and creates all images, tables and results for this document. Also saves selected classifier, features and and feature list.
+- *helper.py*:      Provides useful functions for plotting and data wrangling. Also provides *flex_classifier* class.  
+- *./images*:        Folder containing all images created by *poi_id.py*. Modifying these images will modify the content of this report.
+- *./scripts*:         Folder containing all used scripts. Here you will also find the dumped classifier, dataset, and features_list
+- *./data*:            Folder containing initial dataset
+- *./tester.py*:     Provides functions to to validate ML models and to read and dump classifiers and data
 
 
-
-receiver operating characteristic (ROC) 
-
-
-
- 

@@ -155,7 +155,8 @@ S'optimal'
 p66
 sS'max_iter'
 p67
-NsS'coef_'
+I5
+sS'coef_'
 p68
 g34
 (g35

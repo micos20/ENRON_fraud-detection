@@ -311,4 +311,11 @@ The following scripts and files and folders are used to prepare the content of t
 - *./data*:            Folder containing initial dataset
 - *./tester.py*:     Provides functions to to validate ML models and to read and dump classifiers and data
 
+List of external references: N/A
+
+---
+
+I hereby confirm that this submission is my work. I have cited above the origins of any parts of the submission that were taken from Websites, books, forums, blog posts, github repositories, etc.
+
+January 2021, Michael Wrzos
 

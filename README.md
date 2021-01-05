@@ -243,18 +243,18 @@ Validation of a model means evaluating the performance of the model on instances
 
 To compare the performance between the SVC and SGD model I evaluate the decision function results of each model and create precision vs recall curves. These curves illustrate very well how our algorithm performs. The more the curves are located in the top and right of the diagram the better the performance.   Precision is the ratio between all True Positive (TP) predictions divided by the sum of True Positives and False Positives (FP).
 
-<img src="./images/precision.png">
+<img src="./images/precision.PNG">
 
 Recall, or True Positive Rate (TPR), is the ratio between True Positives and the sum of True Positives and False Negatives (FN) as shown in the formula below.
 
-<img src="./images/recall.png">
+<img src="./images/recall.PNG">
 
 Our task is to find possible Persons of Interest (POIs) from our data set. I'd like to identify as many POIs as possible what means we need to get high recall values. The drawback of high recall values is the drop in precision as can be seen very nicely in the image above. A recall of 1 for the SGD classifier (green curve) would result in a precision value of about 0.36. On the other hand a precision of 1 would result in a low recall of about 0.34. In the image below we can see the precision vs recall curves for the tuned algorithms on the test set.
 
 
-![](.\images\precision_vs_recall_on_test_set_640.png)
+![](.\images\precision_vs_recall_on_test_set_640.PNG)
 
-From the image above we can see that the SGD classifier performs better on the test set than the SVM classifiers. Compared to the Precision/ Recall curves from the training set the SGD classifier performs slightly worse on the test data. The SVC models on the other hand are performing much worse on the test data than on the training set which means the models are still over-fitting. The reduction of hyper-parameter C doesn't seem to change much. Using more features reduces over-fitting, but the SGD model still performs better on the test set. The table below shows the confusion matrix in the form <img src="./images/confusionMatrix_def_80.png">
+From the image above we can see that the SGD classifier performs better on the test set than the SVM classifiers. Compared to the Precision/ Recall curves from the training set the SGD classifier performs slightly worse on the test data. The SVC models on the other hand are performing much worse on the test data than on the training set which means the models are still over-fitting. The reduction of hyper-parameter C doesn't seem to change much. Using more features reduces over-fitting, but the SGD model still performs better on the test set. The table below shows the confusion matrix in the form <img src="./images/confusionMatrix_def_80.PNG">
 
 and the actual recall and precision values for the test set for our classifiers.
 
@@ -262,7 +262,7 @@ and the actual recall and precision values for the test set for our classifiers.
 
 | Metric           | SVM clf (initial, C=10.)             | SVM clf (14 features)                | SGD clf                            |
 | ---------------- | ------------------------------------ | ------------------------------------ | ---------------------------------- |
-| Confusion Matrix | <img src="./images/cm_svc_c_01.png"> | <img src="./images/cm_svc_f_01.png"> | <img src="./images/cm_sgd_01.png"> |
+| Confusion Matrix | <img src="./images/cm_svc_c_01.PNG"> | <img src="./images/cm_svc_f_01.PNG"> | <img src="./images/cm_sgd_01.PNG"> |
 | Recall           | 0.44                                 | 0.78                                 | 0.56                               |
 | Precision        | 0.25                                 | 0.41                                 | 0.50                               |
 
@@ -280,7 +280,7 @@ I use cross validation of the training set to find the best threshold to achieve
 
 | Metric           | flex_SVM clf (C=10.)                 | flex_SVM clf (14 features)           | flex_SGD clf                       |
 | ---------------- | ------------------------------------ | ------------------------------------ | ---------------------------------- |
-| Confusion Matrix | <img src="./images/cm_svc_c_02.png"> | <img src="./images/cm_svc_f_02.png"> | <img src="./images/cm_sgd_02.png"> |
+| Confusion Matrix | <img src="./images/cm_svc_c_02.PNG"> | <img src="./images/cm_svc_f_02.PNG"> | <img src="./images/cm_sgd_02.PNG"> |
 | Recall           | 0.78                                 | 0.78                                 | 0.78                               |
 | Precision        | 0.35                                 | 0.37                                 | 0.44                               |
 
@@ -290,7 +290,7 @@ Well, this looks quite promising. I would chose the SGD classifier if had to put
 
 | Metric           | flex_SVM clf (C=10.)                 | flex_SVM clf (14 features)           | flex_SGD clf                       |
 | ---------------- | ------------------------------------ | ------------------------------------ | ---------------------------------- |
-| Confusion Matrix | <img src="./images/cm_svc_c_03.png"> | <img src="./images/cm_svc_f_03.png"> | <img src="./images/cm_sGD_03.png"> |
+| Confusion Matrix | <img src="./images/cm_svc_c_03.PNG"> | <img src="./images/cm_svc_f_03.PNG"> | <img src="./images/cm_sGD_03.PNG"> |
 | Recall           | 0.66                                 | 0.59                                 | 0.70                               |
 | Precision        | 0.36                                 | 0.34                                 | 0.45                               |
 

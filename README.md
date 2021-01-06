@@ -12,7 +12,7 @@ This project is about using machine learning (ML) to identify Persons of Interes
 
 #### The dataset
 
-The present dataset is taken from the [*Enron Email Dataset*](https://www.cs.cmu.edu/~./enron/) and comprises financial and email data. There are 146 data points (employees and executives from Enron). 18 people are identified as POI and 128 as non-POI. There are 20 features in the dataset. 10 of them are payment features, 4 are stock features (14 financial features) and there are 6 email features. From the output below you can see that all features show missing data. *loan_advances* does only have only 4 *non-null* values and *director_fees*, *restricted_stock_deferred* only 17, respectively 18 *non-null* values. 
+The present dataset is taken from the [*Enron Email Dataset*](https://www.cs.cmu.edu/~./enron/) and comprises financial and email data. There are 146 data points (employees and executives from Enron). 18 people are identified as POI and 128 as non-POI. There are 20 features in the dataset. 10 of them are payment features, 4 are stock features (14 financial features) and there are 6 email features. From the output below you can see that all features show missing data. *loan_advances* does only show 4 *non-null* values and *director_fees* and  *restricted_stock_deferred* only 17 and 18 *non-null* values. 
 
 ```python
 data_Frame.info()
@@ -96,7 +96,7 @@ Before starting with the selection process to find the best features for a chose
 In order to create further new features I divide each feature by all other features and calculate the pearson correlation coefficient with the *poi* column. The best correlations can be seen in the table below. 
 
 ```
-                    feature              divisor      corr  count
+                  numerator          denominator      corr  count_instances
 0                     bonus    deferral_payments  0.665900     21
 1   from_this_person_to_poi    deferral_payments  0.650054     22
 2   shared_receipt_with_poi    deferral_payments  0.551253     22
@@ -119,7 +119,7 @@ In order to create further new features I divide each feature by all other featu
 25  shared_receipt_with_poi          to_messages  0.260937     86
 ```
 
-Based on this data I created new features as can be seen in the table below. This is actually just an experiment. I want to see how these auto-features work.  
+Based on this data I create new features as can be seen in the table below. This is actually just an experiment. I want to see how these auto-created features work.  
 
 | New feature                                 | Numerator                 | Denominator         |
 | ------------------------------------------- | ------------------------- | ------------------- |
@@ -134,13 +134,13 @@ Based on this data I created new features as can be seen in the table below. Thi
 
 As we've seen above there is a lot of missing data in our dataset. During the course of this project I checked different imputation strategies. For the finally selected POI identifier I decided to fill the financial features with 0.0. For the email features I use the median for all missing values. The same strategy is applied to the newly created features. For *toPOI_rate* and *fromPOI_rate* I use the median and for the extra financial features I use 0.0. This is imputation strategy 4 (*impute_04*) from the *poi_id.py* script.    
 
-The final AI model is a Support Vector Classifier. Support Vector Machines are sensitive to feature scales, so the final features are scaled using a Power Transformer applying the *yeo-johnson* method. I also used the Standard Scaler and the Robust Scaler but the algorithm works best with the Power Transformer. This might be caused by the many outliers still in our dataset.
+The investigated AI models are a Support Vector Classifier and a Stochastic Gradient Descent classifier. Both models are sensitive to feature scales, so the final features are scaled using a Power Transformer applying the *yeo-johnson* method. I also used the Standard Scaler and the Robust Scaler but the algorithms work best with the Power Transformer. This might be caused by the many outliers still in our dataset.
 
 #### Selection of features
 
-Before we start investigating what features work best I split the data into a training and test set. The dataset is quite small and we only have 18 instances labeled as POI. Generally I would chose a test set size of about 20% to 30% of the whole data. In our case we would end up with less than 6 POIs in the test set. As I want to use the test set to validate the performance of our classifiers I decided to create a much bigger test set of 50%, knowing that this could compromise the quality/ accuracy of our models to be trained.  
+Before we start investigating what features work best I split the data into a training and test set. The dataset is quite small and we only have 18 instances labeled as POI. Generally I would chose a test set size of about 20% up to 30% of the whole data. In our case we would end up with less than 6 POIs in the test set. As I want to use the test set to validate the performance of our classifiers I decided to create a much bigger test set of 50%, knowing that this could compromise/ reduce the performance of our AI models.  
 
-For feature selection I use cross validated recursive feature elimination (RFECV) method. An estimator is required to run RFECV method, so we will come up with different sets of features for each investigated classifier. RFECV provides feature rankings. All selected features have rank 1. The remaining features are numbered in accordance to their importance. The results of feature ranking for a Support Vector classifier (SVC) and a Stochastic Gradient Descent classifier (SGD) are shown in the table below.  
+For feature selection I use cross validated recursive feature elimination (RFECV) method. An estimator is required to run RFECV method, so we will come up with different sets of features for each investigated classifier. RFECV provides feature rankings. All selected features have rank 1. The remaining features are numbered in accordance to their importances. The results of feature ranking for a Support Vector classifier (SVC) and a Stochastic Gradient Descent classifier (SGD) are shown in the table below.  
 
 ***Ranking of features by RFECV method***
 
@@ -173,7 +173,7 @@ For feature selection I use cross validated recursive feature elimination (RFECV
 |                                             |          |          |
 | **Total selected features**                 |    10    | 17       |
 
-Bold marked features in the table above are selected for one or both classifiers. SGD and SVM classifiers have 7 features in common. For the SVM classifier 10 features are selected. 17 features are selected for the SGD classifier. 3 out of the 10 SVC features are newly created features. For the SGD classifier 4 new features are selected.
+Bold marked features in the table above are selected for one or both classifiers. SGD and SVM classifiers have 7 features in common. For the SVM classifier 10 features are selected. 17 features are selected for the SGD classifier. 3 out of the 10 SVC features are newly created features. For the SGD classifier 4 new features are selected. The 17 SGD-features are the features finally selected to predict the POIs.
 
 
 
@@ -227,7 +227,7 @@ In order to compare the performance of the SGD and SVC model I plot the precisio
 
 ![](./images/precision_vs_recall_on_train_set_640.png)
 
-For the SGD model we can observe an improvement for the tuned model (green vs yellow). For the SVM classifier (red vs blue) the improvement is tremendously, leading to a ROC AUC (Area Under Curve) score of 99.6%. The model seems to over-fit the training data (what can be seen later during validation). 
+For the SGD model we can observe an improvement for the tuned model (green vs yellow). For the SVM classifier (red vs blue) the improvement is tremendous, leading to a ROC AUC (Receiver Operating Characteristic, Area Under Curve) score of 99.6%. The model seems to over-fit the training data (what can be seen later during validation). 
 
 I tried two approaches to overcome the over-fitting issue. First I manually decreased the C parameter to C=10.0 and the gamma parameter I slightly increased to gamma = 0.055. The resulting precision vs recall curve is given in the image above (orange curve). The ROC AUC is still 98.7% and I think the model is still over-fitting. Second I increased the minimum number of features to be selected by the RFECV algorithm to 14 features. The algorithm selects the following features: 'salary', 'bonus', 'deferred_income', 'other', 'expenses', 'total_payments', 'restricted_stock_deferred', 'from_this_person_to_poi', 'from_poi_to_this_person', 'shared_receipt_with_poi', 'long_term_incentive_total_payments_rate', 'bonus_total_payments_rate', 'toPOI_rate' and 'fromPOI_rate'. The initial  SVC model uses only 10 features. The tuned precision vs recall curve (black) for the SVC with 14 features can be seen in the image above. Although the tuned model with 14 features performs worse than the blue one (untuned SVC with 10 features) it looks much more natural to me. 
 
@@ -241,7 +241,7 @@ In this chapter we will validate our classifiers against the test set, address t
 
 Validation of a model means evaluating the performance of the model on instances the model hasn't seen yet. In other words, these new instances weren't part of the training set. By evaluating the model on the test set we can estimate how our model will perform in real life. This process will also reveal if our algorithm generalizes well (makes good predictions on unknown instances) or if it's over-fitting the training data. In case of over-fitting the model performs extremely well on the training data but is much worse on the test data. We've already seen a case of over-fitting on the training set in the image above, where the tuned SVM classifier performs extremely well on training set resulting in a ROC AUC of more than 99%. 
 
-To compare the performance between the SVC and SGD model I evaluate the decision function results of each model and create precision vs recall curves. These curves illustrate very well how our algorithm performs. The more the curves are located in the top and right of the diagram the better the performance.   Precision is the ratio between all True Positive (TP) predictions divided by the sum of True Positives and False Positives (FP).
+To compare the performance between the SVC and SGD model I evaluate the decision function results of each model and create precision vs recall curves. These curves illustrate very well how our algorithm performs. The more the curves are located in the top and right of the diagram the better the performance. Precision is the ratio between all True Positive (TP) predictions divided by the sum of True Positives and False Positives (FP).
 
 <img src="./images/precision.PNG">
 
@@ -266,7 +266,7 @@ and the actual recall and precision values for the test set for our classifiers.
 | Recall           | 0.44                                 | 0.78                                 | 0.56                               |
 | Precision        | 0.25                                 | 0.41                                 | 0.50                               |
 
-The SVC with 14 features shows already promising results, but the actual predictions of the SGD classifier does not reflect our goal to find as many POIs as possible. In order to address this issue I coded as class called *flex_classifier* which can be used to optimize recall and precision output. I want to have a precision value >= 0.35 and a recall value of  >= 0.40 and the classifier shall optimize recall (as high as possible at given min. requirements). A code example of the SGD classifier is shown below.
+The SVC with 14 features shows already promising results, but the actual predictions of the SGD classifier do not reflect our goal to find as many POIs as possible. In order to address this issue I coded as class called *flex_classifier* which can be used to optimize recall and precision output. I want to have a precision value >= 0.35 and a recall value of  >= 0.40 and the classifier shall optimize recall (as high as possible at given min. requirements). A code example of the SGD classifier is shown below. This flex classifier uses our SGD and SVC classifiers we've just created as base models and optimize the predictions based on the precision/ recall targets. 
 
 ```python
 # Flex classifier for SGD model optimizing recall
@@ -274,7 +274,11 @@ flex_SGD_clf = helper.flex_classifier(SGD_clf, min_precision=0.35, min_recall=0.
 flex_SGD_clf.fit(X_train_44_SGD, y_train)
 ```
 
-I use cross validation of the training set to find the best threshold to achieve better recall results. The results of the flex_classifier for the SGD and SVC model are given in the table below.
+I use cross validation of the training set to find the best thresholds to achieve better recall results. The results of the flex_classifiers for the SGD and SVC model are given in the table below.
+
+
+
+
 
 ***Performance of flex classifiers on test set***
 
@@ -319,3 +323,4 @@ I hereby confirm that this submission is my work. I have cited above the origins
 
 January 2021, Michael Wrzos
 
+ 

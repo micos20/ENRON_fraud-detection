@@ -294,7 +294,7 @@ Well, this looks quite promising. I would chose the SGD classifier if had to put
 
 | Metric           | flex_SVM clf (C=10.)                 | flex_SVM clf (14 features)           | flex_SGD clf                       |
 | ---------------- | ------------------------------------ | ------------------------------------ | ---------------------------------- |
-| Confusion Matrix | <img src="./images/cm_svc_c_03.PNG"> | <img src="./images/cm_svc_f_03.PNG"> | <img src="./images/cm_sGD_03.PNG"> |
+| Confusion Matrix | <img src="./images/cm_svc_c_03.PNG"> | <img src="./images/cm_svc_f_03.PNG"> | <img src="./images/cm_sgd_03.PNG"> |
 | Recall           | 0.66                                 | 0.59                                 | 0.70                               |
 | Precision        | 0.36                                 | 0.34                                 | 0.45                               |
 
